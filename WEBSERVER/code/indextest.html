@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PoseNet Video Stream</title>
+    <style>
+      body {
+        font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+      }
+      #container {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        grid-auto-rows: minmax(200px, auto);
+        row-gap: 0px;
+      }
+
+      #container > div {
+        flex: 1;
+        max-width: 200px;
+        /*max-width: calc(
+          15% - 10px
+        );*/ /* Adjust the percentage and gap as needed */
+        box-sizing: border-box;
+        border: 1px solid black;
+        width: 200px;
+        height: 200px;
+      }
+
+      .image-container {
+        z-index: -1;
+        position: absolute;
+      }
+
+      #container img {
+        z-index: -1;
+      }
+      .motionLabelText {
+        color: red;
+        background-color: rgba(255, 255, 255, 0.53);
+        font-size: 25px;
+        z-index: 2;
+        position: absolute;
+        font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+      }
+      .cameraLabel {
+        background-color: rgba(255, 255, 255, 0.53);
+        color: blue;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Swarm Vision Visualizer</h2>
+    <div id="container"></div>
+
+    <!-- Load TensorFlow.js -->
+    <script src="https://unpkg.com/@tensorflow/tfjs"></script>
+    <!-- Load Posenet -->
+    <script src="https://unpkg.com/@tensorflow-models/posenet"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+      let posenetModel;
+      var socket = io();
+
+      posenet.load().then(function (net) {
+        posenetModel = net;
+      });
+
+      socket.on("start", function (cou) {
+        var container = document.getElementById("container");
+
+        function createCameraDiv(cameraId, cameraLabel) {
+          var divSocket,
+            div = document.createElement("div");
+
+          //var html = "<p class='cameraLabel'>" + cameraLabel + "</p>";
+
+          var html =
+            "<p class='motionLabelText' id='motionLabel" +
+            cameraId +
+            "'>" +
+            "waiting..." +
+            "</p>";
+          html += "<div class='image-container'><img id='camImage'></div>";
+
+          div.innerHTML = html;
+          var image = div.getElementsByTagName("img")[0];
+          var canvas = document.createElement("canvas");
+          div.getElementsByClassName("image-container")[0].appendChild(canvas);
+          var ctx = canvas.getContext("2d");
+
+          divSocket = io(location.origin + cameraId);
+          divSocket.on("data", function (data) {
+            var bytes = new Uint8Array(data);
+
+            // Perform pose estimation
+            estimatePose(
+              image,
+              bytes,
+              canvas,
+              ctx,
+              "motionLabel" + cameraId,
+              cameraId
+            );
+          });
+
+          container.appendChild(div);
+          return div;
+        }
+
+        // Loop through all available cameras and create camera divs with labels
+        for (let i = 0; i < cou; i++) {
+          createCameraDiv("/cam" + i, "Camera " + i);
+        }
+
+        // Attempt to reconnect every 10s seconds for all cameras
+        //   setInterval(() => {
+        //     container.innerHTML = ""; // Clear existing camera divs
+        //     // Recreate camera divs for all cameras
+        //     for (let i = 0; i < cou; i++) {
+        //       createCameraDiv("/cam" + i, "Camera " + i);
+        //     }
+        //   }, 10000);
+      });
+
+      async function estimatePose(
+        imageElement,
+        imageData,
+        canvas,
+        ctx,
+        motionLabelId,
+        cameraId
+      ) {
+        const imageScaleFactor = 0.5;
+        const flipHorizontal = false;
+        const outputStride = 16;
+        // get up to 5 poses
+        const maxPoseDetections = 1;
+        // minimum confidence of the root part of a pose
+        const scoreThreshold = 0.6;
+        // minimum distance in pixels between the root parts of poses
+        const nmsRadius = 20;
+
+        // Create a blob from the imageData
+        var bytes = new Uint8Array(imageData);
+        var blob = new Blob([bytes], { type: "application/octet-binary" });
+        var imageUrl = URL.createObjectURL(blob);
+
+        // Load the image
+        const image = new Image();
+        image.src = imageUrl;
+        await image.decode();
+
+        // Resize canvas to match image size
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        // Draw the image on the canvas
+        ctx.drawImage(image, 0, 0, image.width, image.height);
+
+        // Estimate pose
+        const poses = await posenetModel.estimateMultiplePoses(
+          image,
+          imageScaleFactor,
+          flipHorizontal,
+          outputStride,
+          maxPoseDetections,
+          scoreThreshold,
+          nmsRadius
+        );
+
+        const pose = poses[0];
+
+        // Draw keypoints and skeleton on the canvas
+        drawPoseOnCanvas(pose, ctx);
+
+        const rightElbow = pose.keypoints.find(
+          (kp) => kp.part === "rightElbow"
+        );
+        const rightWrist = pose.keypoints.find(
+          (kp) => kp.part === "rightWrist"
+        );
+
+        const leftElbow = pose.keypoints.find((kp) => kp.part === "leftElbow");
+        const leftWrist = pose.keypoints.find((kp) => kp.part === "leftWrist");
+
+        if (rightElbow && rightWrist && leftElbow && leftWrist) {
+          // Calculate angles for right and left arms
+          const rightArmAngle = calculateAngle(rightElbow, rightWrist);
+          const leftArmAngle = calculateAngle(leftElbow, leftWrist);
+
+          // Define threshold angles for pointing directions
+          const straightAngleThreshold = 10;
+          const diagonalAngleThreshold = 30;
+
+          // Check for pointing directions
+          if (isStraight(rightArmAngle, straightAngleThreshold)) {
+            console.log("Right arm pointing straight");
+            // Emit a message to the server for right arm pointing straight
+          } else if (isDiagonalUpRight(rightArmAngle, diagonalAngleThreshold)) {
+            console.log("Right arm pointing up and right");
+            // Emit a message to the server for right arm pointing up and right
+          }
+          // Add similar checks for other pointing directions...
+
+          if (isStraight(leftArmAngle, straightAngleThreshold)) {
+            console.log("Left arm pointing straight");
+            // Emit a message to the server for left arm pointing straight
+          } else if (isDiagonalUpLeft(leftArmAngle, diagonalAngleThreshold)) {
+            console.log("Left arm pointing up and left");
+            // Emit a message to the server for left arm pointing up and left
+          }
+          // Add similar checks for other pointing directions...
+        }
+
+        // ... (rest of your code)
+
+        function calculateAngle(startPoint, endPoint) {
+          return (
+            Math.atan2(
+              endPoint.position.y - startPoint.position.y,
+              endPoint.position.x - startPoint.position.x
+            ) *
+            (180 / Math.PI)
+          );
+        }
+
+        function isStraight(angle, threshold) {
+          return Math.abs(angle) < threshold;
+        }
+
+        function isDiagonalUpRight(angle, threshold) {
+          return angle > 0 && angle < threshold;
+        }
+
+        function isDiagonalUpLeft(angle, threshold) {
+          return angle < 0 && angle > -threshold;
+        }
+        // Check the angle of the line formed by the shoulders
+        // const rightShoulder = pose.keypoints.find(
+        //   (kp) => kp.part === "rightShoulder"
+        // );
+        // const leftShoulder = pose.keypoints.find(
+        //   (kp) => kp.part === "leftShoulder"
+        // );
+
+        // if (rightShoulder && leftShoulder) {
+        //   // Calculate the angle of the line formed by the shoulders
+        //   const angle = Math.atan2(
+        //     leftShoulder.position.y - rightShoulder.position.y,
+        //     leftShoulder.position.x - rightShoulder.position.x
+        //   );
+        //   let angleInDegrees = (angle * 180) / Math.PI;
+
+        //   // Ensure angle is between -180 and 180 degrees
+        //   if (angleInDegrees > 180) {
+        //     angleInDegrees -= 360;
+        //   } else if (angleInDegrees < -180) {
+        //     angleInDegrees += 360;
+        //   }
+
+        //   // If the absolute angle is greater than a threshold, emit a message to the server
+        //   const tiltThreshold = 20; // Adjust this threshold based on your requirements
+        //   let motionLabel = document.getElementById(motionLabelId);
+
+        //   if (Math.abs(angleInDegrees) > tiltThreshold) {
+        //     if (angleInDegrees > 0) {
+        //       console.log(`left shoulder tilt: ${angleInDegrees}`);
+        // socket.emit(
+        //   "tilt",
+        //   cameraId +
+        //     "LEDColorDirectionUpdate " +
+        //     cameraId +
+        //     " color:1  direction:topleft"
+        // );
+        // motionLabel.textContent = "leftTilt";
+        //     } else {
+        //       console.log(`right shoulder tilt: ${angleInDegrees}`);
+        //       socket.emit(
+        //         "tilt",
+        //         cameraId +
+        //           "LEDColorDirectionUpdate " +
+        //           cameraId +
+        //           " color:2 direction:topright"
+        //       );
+        //       motionLabel.textContent = "rightTilt";
+        //     }
+        //   } else {
+        //     //socket.emit("tilt", cameraId + "neutral");
+        //     motionLabel.textContent = "neutral";
+        //   }
+        // }
+      }
+
+      function drawPoseOnCanvas(pose, ctx) {
+        // Draw keypoints
+        pose.keypoints.forEach((keypoint) => {
+          if (keypoint.score > 0.6) {
+            ctx.beginPath();
+            ctx.arc(
+              keypoint.position.x,
+              keypoint.position.y,
+              5,
+              0,
+              2 * Math.PI
+            );
+            ctx.fillStyle = "red";
+            ctx.fill();
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

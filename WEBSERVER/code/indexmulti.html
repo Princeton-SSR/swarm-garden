@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Camera Streams</title>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>Camera Streams</h1>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const socket = io("http://localhost:6147");
+
+        socket.on("start", function (numCameras) {
+          for (let i = 0; i < numCameras; i++) {
+            createCameraElement(i);
+          }
+        });
+
+        function createCameraElement(index) {
+          const cameraContainer = document.createElement("div");
+          cameraContainer.id = "camera" + index;
+          document.body.appendChild(cameraContainer);
+
+          const cameraSocket = io("/cam" + index);
+          const videoElement = document.createElement("video");
+          videoElement.autoplay = true;
+          cameraContainer.appendChild(videoElement);
+
+          cameraSocket.on("data", function (data) {
+            // Assuming data is the stream data, you may need to adjust this part
+            videoElement.src = "data:image/jpeg;base64," + data;
+          });
+
+          cameraSocket.on("disconnect", function () {
+            console.log("Disconnected from /cam" + index);
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

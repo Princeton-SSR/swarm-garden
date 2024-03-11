@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PoseNet Video Stream</title>
+    <style>
+      select {
+        display: block;
+      }
+      #container > div {
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container"></div>
+    <button id="add">+</button>
+
+    <!-- Load TensorFlow.js -->
+    <script src="https://unpkg.com/@tensorflow/tfjs"></script>
+    <!-- Load Posenet -->
+    <script src="https://unpkg.com/@tensorflow-models/posenet"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+      let posenetModel;
+      var socket = io();
+
+      posenet.load().then(function (net) {
+        posenetModel = net;
+      });
+
+      const confidenceThreshold = 0.7;
+
+      socket.on("start", function (cou) {
+        var container = document.getElementById("container");
+        document.getElementById("add").onclick = function () {
+          var divSocket,
+            div = document.createElement("div");
+          var html = '<select><option value="/">select cam</option>';
+          for (var i = 0; i < cou; i++) {
+            html += '<option value="/cam' + i + '">Cam ' + i + "</option>";
+          }
+          html += "</select>";
+          html += "<div class='image-container'><img id='camImage'></div>";
+          div.innerHTML = html;
+          var image = div.getElementsByTagName("img")[0],
+            select = div.getElementsByTagName("select")[0];
+          var canvas = document.createElement("canvas");
+          div.getElementsByClassName("image-container")[0].appendChild(canvas);
+          var ctx = canvas.getContext("2d");
+
+          select.onchange = function () {
+            if (divSocket) {
+              divSocket.disconnect();
+            }
+            console.log(this.value);
+            divSocket = io(location.origin + this.value);
+            divSocket.on("data", function (data) {
+              var bytes = new Uint8Array(data);
+
+              // Perform pose estimation
+              estimatePose(image, bytes, canvas, ctx);
+            });
+          };
+          container.appendChild(div);
+        };
+      });
+
+      const previousKeypointPositions = Array(17).fill({ x: 0, y: 0 });
+
+      async function estimatePose(imageElement, imageData, canvas, ctx) {
+        const imageScaleFactor = 0.5;
+        const flipHorizontal = false;
+        const outputStride = 16;
+
+        // Create a blob from the imageData
+        const blob = new Blob([imageData], { type: "image/jpeg" });
+        const imageUrl = URL.createObjectURL(blob);
+
+        // Load the image
+        const image = new Image();
+        image.src = imageUrl;
+        await image.decode();
+
+        // Resize canvas to match image size
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        // Draw the image on the canvas
+        ctx.drawImage(image, 0, 0, image.width, image.height);
+
+        // Estimate pose
+        const pose = await posenetModel.estimateSinglePose(
+          image,
+          imageScaleFactor,
+          flipHorizontal,
+          outputStride
+        );
+
+        // Smooth keypoints
+
+        // pose.keypoints.forEach((keypoint, index) => {
+        //   // Apply smoothing using a simple moving average over the last N frames
+        //   const smoothingFactor = 0.8; // Adjust as needed
+        //   const smoothedPosition = {
+        //     x:
+        //       smoothingFactor * keypoint.position.x +
+        //       (1 - smoothingFactor) * previousKeypointPositions[index].x,
+        //     y:
+        //       smoothingFactor * keypoint.position.y +
+        //       (1 - smoothingFactor) * previousKeypointPositions[index].y,
+        //   };
+
+        //   // Update keypoint position
+        //   keypoint.position = smoothedPosition;
+        //   previousKeypointPositions[index] = smoothedPosition;
+        // });
+
+        // Draw keypoints and skeleton on the canvas
+        drawPoseOnCanvas(pose, ctx);
+
+        // Check the distance between right and left wrists
+        const rightWrist = pose.keypoints.find(
+          (kp) => kp.part === "rightWrist"
+        );
+
+        const leftWrist = pose.keypoints.find((kp) => kp.part === "leftWrist");
+
+        if (rightWrist && leftWrist) {
+          const distance = Math.sqrt(
+            Math.pow(rightWrist.position.x - leftWrist.position.x, 2) +
+              Math.pow(rightWrist.position.y - leftWrist.position.y, 2)
+          );
+
+          // If the distance is close to zero, emit a message to the server
+          if (distance < 10) {
+            socket.emit("message", "Hello");
+            console.log("message sent!");
+          }
+        }
+      }
+
+      function drawPoseOnCanvas(pose, ctx) {
+        // Draw keypoints
+        pose.keypoints.forEach((keypoint) => {
+          ctx.beginPath();
+          ctx.arc(keypoint.position.x, keypoint.position.y, 5, 0, 2 * Math.PI);
+          ctx.fillStyle = "red";
+          ctx.fill();
+        });
+      }
+    </script>
+  </body>
+</html>
