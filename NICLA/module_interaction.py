@@ -484,7 +484,7 @@ def return_to_base_conditions():
 
 ########################### IDLE MESSAGE LISTENING ##########################
 
-def idle_listening(s):
+def auto_showcase(s):
     global neighbors_list
     global LEDColor
     global mode
