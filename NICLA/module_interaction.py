@@ -484,46 +484,6 @@ def return_to_base_conditions():
 
 ########################### IDLE MESSAGE LISTENING ##########################
 
-def auto_showcase(s):
-    global neighbors_list
-    global LEDColor
-    global mode
-    global last_command_time
-
-    while True:
-        evts = poller.poll(10)
-
-        ##################### MESSAGE + STATE MANAGEMENT ######################
-        for sock, evt in evts:
-            if evt and select.POLLIN:
-                if sock == s:
-                    data, addr = s.recvfrom(1024)
-                    data = data.decode()
-
-                    last_command_time = time.time()
-
-                    if "neighborsUpdate" in data:
-                        handle_neighbors_update(data)
-                    elif "modeUpdate" in data:
-                        handle_mode_update(data)
-                        return
-                    elif "LEDColorUpdate" in data:
-                        handle_LED_color_update(data)
-                    elif "LEDColorDirectionUpdate" in data:
-                        handle_LED_color_direction_update(data)
-                    elif "bloomUpdate" in data:
-                        handle_bloom_update(data)
-                    elif "stripUpdate" in data:
-                        handle_strip_update(data)
-                    elif "stripDirectionUpdate" in data:
-                        handle_strip_direction_update(data)
-
-        # if no commands have happened in the last 20 seconds, return to base conditions
-        if time.time() - last_command_time >= 20:
-                return_to_base_conditions()
-
-########################### AUTO-SHOWCASE ##########################
-
 def idle_listening(s):
     global neighbors_list
     global LEDColor
@@ -532,15 +492,6 @@ def idle_listening(s):
 
     while True:
         evts = poller.poll(10)
-
-
-        ### RIPPLE BLOOM ANIMATION ACROSS SWARM ###
-
-        ## RESET ##
-
-        ### RANDOM BLOOMS CYCLE ### 
-
-        ## RESET ##
 
         ##################### MESSAGE + STATE MANAGEMENT ######################
         for sock, evt in evts:
