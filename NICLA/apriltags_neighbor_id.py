@@ -1,7 +1,6 @@
 import sensor
 import time
 import math
-import pyb
 import socket
 import network
 
@@ -23,14 +22,14 @@ server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.setsockopt(socket.SOL_SOCKET, 0x20, 1)
 server.bind(("", 30001))
 
-pyb.LED(3).on()  # visual for wifi connection
-
+#pyb.LED(3).on()  # visual for wifi connection
 sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)
+sensor.set_pixformat(sensor.RGB565)
+sensor.set_framesize(sensor.XGA)
+#sensor.set_windowing((240, 240)) ?
 sensor.skip_frames(time=2000)
 sensor.set_auto_gain(False)
-sensor.set_auto_whitebal(False)
+sensor.set_auto_whitebal(True)
 clock = time.clock()
 
 f_x = (2.8 / 3.984) * 160

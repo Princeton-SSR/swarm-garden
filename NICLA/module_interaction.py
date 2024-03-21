@@ -28,7 +28,6 @@ sensor.reset()  # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
 sensor.set_windowing((240, 240))  # Set 240x240 window.
-sensor.skip_frames(time=2000)  # Let the camera adjust.
 
 min_confidence = 0.25
 
@@ -79,7 +78,7 @@ LEDcolor = ""
 #bloom = tof2.read()
 
 # background LED strip color
-LEDStripColor = ""
+LEDStripColor = "(0,0,0)"
 
 # we will append this to the ifconfig to route camera streams properly
 webhost_unique = str(200 + module_ID)
@@ -87,7 +86,7 @@ webhost_unique = str(200 + module_ID)
 # used for checking when the last command was recieved
 last_command_time = time.time()
 
-isBlooming = False
+#isBlooming = False
 
 ##########################################################################
 
@@ -139,7 +138,7 @@ for i in range(n):
 np.write()
 
 # careful lowering this, at some point you run into the mechanical limitation of how quick your motor can move
-step_sleep = 0.00205
+step_sleep = 0.00305
 current_motion = "stop"
 step_count = 100
 
@@ -350,8 +349,8 @@ def handle_mode_update(data):
 
     if "mpegPose" in data:
         mode = "mpegPose"
-    elif "faceDetection" in data:
-        mode = "faceDetection"
+    elif "wearable" in data:
+        mode = "wearable"
     else:
         mode = "idle"
 
@@ -397,6 +396,35 @@ def handle_bloom_update(data):
 
     stop()
 
+# Define the fading speed (in seconds)
+FADE_SPEED = 0.05  # Adjust this value for the desired speed
+
+def fade_color(old_color, new_color, fade_speed):
+    """
+    Fade from the old color to the new color gradually.
+    """
+    if old_color == new_color:
+        return new_color
+
+    # Convert string format to tuple of integers
+    old_color = tuple(map(int, old_color[1:-1].split(',')))
+    new_color = tuple(map(int, new_color[1:-1].split(',')))
+
+    r_old, g_old, b_old = old_color
+    r_new, g_new, b_new = new_color
+    # Calculate the incremental steps for each color channel
+    step_r = (r_new - r_old) / max(abs(r_new - r_old), 1)
+    step_g = (g_new - g_old) / max(abs(g_new - g_old), 1)
+    step_b = (b_new - b_old) / max(abs(b_new - b_old), 1)
+
+    # Fade towards the new color gradually
+    while (r_old, g_old, b_old) != new_color:
+        r_old = int(r_old + step_r)
+        g_old = int(g_old + step_g)
+        b_old = int(b_old + step_b)
+        yield (r_old, g_old, b_old)
+        time.sleep(fade_speed)
+
 def handle_strip_update(data):
     global LEDStripColor
     global neighbors_list
@@ -410,12 +438,21 @@ def handle_strip_update(data):
     # Convert each string to an integer
     rgb = tuple(int(value) for value in rgb_values_str)
 
-    # Draw gradient
-    for i in range(n):
-        np[i] = rgb
 
-    # Update the strip.
-    np.write()
+    for color in fade_color(LEDStripColor, incoming_rgb, FADE_SPEED):
+           # Draw gradient
+        for i in range(n):
+            np[i] = color
+
+        # Update the strip.
+        np.write()
+
+#    # Draw gradient
+#    for i in range(n):
+#        np[i] = rgb
+
+#    # Update the strip.
+#    np.write()
 
     LEDStripColor = incoming_rgb
 
@@ -482,6 +519,8 @@ def return_to_base_conditions():
 #            dist_from_stop = tof2.read()
 
 
+stabilize_time = 20  # seconds until return to base conditions runs
+
 ########################### IDLE MESSAGE LISTENING ##########################
 
 def idle_listening(s):
@@ -519,8 +558,11 @@ def idle_listening(s):
                         handle_strip_direction_update(data)
 
         # if no commands have happened in the last 20 seconds, return to base conditions
-        if time.time() - last_command_time >= 20:
+        if time.time() - last_command_time >= stabilize_time:
+                #stop listening
                 return_to_base_conditions()
+                #continue listening
+
 
 ##################@### WEBSERVER SOCKET + STREAMING / LISTENING ################
 
@@ -610,7 +652,7 @@ def MPEG_streaming(s, webserver):
                         handle_strip_direction_update(data)
 
         # if no commands have happened in the last 20 seconds, return to base conditions
-        if time.time() - last_command_time >= 20:
+        if time.time() - last_command_time >= stabilize_time:
                 return_to_base_conditions()
 
 
@@ -624,8 +666,7 @@ while(True):
            MPEG_streaming(s, webserver)
         except:
             print("Reconnect Camera")
-    elif mode == "faceDetection":
-        #face_detection(s)
-        print("face detection")
+    elif mode == "wearable":
+        print("wearable")
     else:
         idle_listening(s)
