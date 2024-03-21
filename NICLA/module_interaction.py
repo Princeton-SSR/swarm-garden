@@ -86,14 +86,14 @@ webhost_unique = str(200 + module_ID)
 # used for checking when the last command was recieved
 last_command_time = time.time()
 
-#isBlooming = False
+listeningOn = True
 
 ##########################################################################
 
 ################## SETTING UP WIFI NETWORK + SOCKET BROADCAST #################
 
-SSID='BlueSwarm' # Network SSID
-KEY='Tpossr236'  # Network key
+SSID='LeonardLabFWing' # Network SSID
+KEY='LeonardLabRoboticsFWing'  # Network key
 
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
@@ -379,14 +379,14 @@ def handle_bloom_update(data):
 
     if bloom is "unbloom":
         forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
-        while dist_from_stop < 105:
+        while dist_from_stop < 67:
             upwards()
 
             dist_from_stop = tof2.read()
 
     if bloom is "bloom":
         forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
-        while dist_from_stop > 75:
+        while dist_from_stop > 43:
             downwards()
 
             dist_from_stop = tof2.read()
@@ -397,7 +397,7 @@ def handle_bloom_update(data):
     stop()
 
 # Define the fading speed (in seconds)
-FADE_SPEED = 0.05  # Adjust this value for the desired speed
+FADE_SPEED = 0.025  # Adjust this value for the desired speed
 
 def fade_color(old_color, new_color, fade_speed):
     """
@@ -438,7 +438,6 @@ def handle_strip_update(data):
     # Convert each string to an integer
     rgb = tuple(int(value) for value in rgb_values_str)
 
-
     for color in fade_color(LEDStripColor, incoming_rgb, FADE_SPEED):
            # Draw gradient
         for i in range(n):
@@ -473,12 +472,20 @@ def handle_strip_direction_update(data):
     # Convert each string to an integer
     rgb = tuple(int(value) for value in rgb_values_str)
 
-    # Draw gradient
-    for i in range(n):
-        np[i] = rgb
+    for color in fade_color(LEDStripColor, incoming_rgb, FADE_SPEED):
+           # Draw gradient
+        for i in range(n):
+            np[i] = color
 
-    # Update the strip.
-    np.write()
+        # Update the strip.
+        np.write()
+
+#    # Draw gradient
+#    for i in range(n):
+#        np[i] = rgb
+
+#    # Update the strip.
+#    np.write()
 
     LEDStripColor = incoming_rgb
 
@@ -503,21 +510,25 @@ def handle_LED_color_direction_update(data):
 
 
 def return_to_base_conditions():
-    # turn off LED strip
-    for i in range(n):
-        np[i] = (0,0,0)
-    np.write()
+    global LEDStripColor
+    # turn off LED stri
+    for color in fade_color(LEDStripColor, "(0,0,0)", FADE_SPEED):
+           # Draw gradient
+        for i in range(n):
+            np[i] = color
 
-    # set a global interrupt variable that can allow cut off mid-bloom?
-    # lets try to also turn off listening here
+        # Update the strip.
+        np.write()
+
+    LEDStripColor = "(0,0,0)"
+
     # reset to unbloom
-#    dist_from_stop = tof2.read()
+    dist_from_stop = tof2.read()
 
-#    if dist_from_stop < 105:
-#        while dist_from_stop < 105:
-#            upwards()
-#            dist_from_stop = tof2.read()
-
+    if dist_from_stop < 67:
+        while dist_from_stop < 67:
+            upwards()
+            dist_from_stop = tof2.read()
 
 stabilize_time = 20  # seconds until return to base conditions runs
 
@@ -528,40 +539,44 @@ def idle_listening(s):
     global LEDColor
     global mode
     global last_command_time
+    global listeningOn
 
     while True:
         evts = poller.poll(10)
 
         ##################### MESSAGE + STATE MANAGEMENT ######################
-        for sock, evt in evts:
-            if evt and select.POLLIN:
-                if sock == s:
-                    data, addr = s.recvfrom(1024)
-                    data = data.decode()
+        if listeningOn:
+            for sock, evt in evts:
+                if evt and select.POLLIN:
+                    if sock == s:
+                        data, addr = s.recvfrom(1024)
+                        data = data.decode()
 
-                    last_command_time = time.time()
+                        last_command_time = time.time()
 
-                    if "neighborsUpdate" in data:
-                        handle_neighbors_update(data)
-                    elif "modeUpdate" in data:
-                        handle_mode_update(data)
-                        return
-                    elif "LEDColorUpdate" in data:
-                        handle_LED_color_update(data)
-                    elif "LEDColorDirectionUpdate" in data:
-                        handle_LED_color_direction_update(data)
-                    elif "bloomUpdate" in data:
-                        handle_bloom_update(data)
-                    elif "stripUpdate" in data:
-                        handle_strip_update(data)
-                    elif "stripDirectionUpdate" in data:
-                        handle_strip_direction_update(data)
+                        if "neighborsUpdate" in data:
+                            handle_neighbors_update(data)
+                        elif "modeUpdate" in data:
+                            handle_mode_update(data)
+                            return
+                        elif "LEDColorUpdate" in data:
+                            handle_LED_color_update(data)
+                        elif "LEDColorDirectionUpdate" in data:
+                            handle_LED_color_direction_update(data)
+                        elif "bloomUpdate" in data:
+                            handle_bloom_update(data)
+                        elif "stripUpdate" in data:
+                            handle_strip_update(data)
+                        elif "stripDirectionUpdate" in data:
+                            handle_strip_direction_update(data)
 
         # if no commands have happened in the last 20 seconds, return to base conditions
         if time.time() - last_command_time >= stabilize_time:
-                #stop listening
+                listeningOn = False
                 return_to_base_conditions()
-                #continue listening
+                time.sleep(5)
+                listeningOn = True
+
 
 
 ##################@### WEBSERVER SOCKET + STREAMING / LISTENING ################
