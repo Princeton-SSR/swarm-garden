@@ -62,11 +62,11 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 ########################## MODULE VARIABLES ###############################
 
 # must match the id of the attached April Tag
-module_ID = 2
+module_ID = 1
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
-neighbors_list = []
+neighbors_list = ['(2,left)']
 
 # current mode
 mode = "idle"
@@ -92,8 +92,8 @@ listeningOn = True
 
 ################## SETTING UP WIFI NETWORK + SOCKET BROADCAST #################
 
-SSID='LeonardLabFWing' # Network SSID
-KEY='LeonardLabRoboticsFWing'  # Network key
+SSID='SwarmGarden' # Network SSID
+KEY='swarmgardenhorray123!'  # Network key
 
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
@@ -138,9 +138,9 @@ for i in range(n):
 np.write()
 
 # careful lowering this, at some point you run into the mechanical limitation of how quick your motor can move
-step_sleep = 0.00305
+step_sleep = 0.005
 current_motion = "stop"
-step_count = 100
+step_count = 200
 
 step_max = 0
 
@@ -379,7 +379,7 @@ def handle_bloom_update(data):
 
     if bloom is "unbloom":
         forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
-        while dist_from_stop < 67:
+        while dist_from_stop < 70:
             upwards()
 
             dist_from_stop = tof2.read()
@@ -571,7 +571,8 @@ def idle_listening(s):
                             handle_strip_direction_update(data)
 
         # if no commands have happened in the last 20 seconds, return to base conditions
-        if time.time() - last_command_time >= stabilize_time:
+        # need to test this check for LEDStripColor and bloom
+        if time.time() - last_command_time >= stabilize_time and LEDStripColor is not "(0,0,0)":
                 listeningOn = False
                 return_to_base_conditions()
                 time.sleep(5)
