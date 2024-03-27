@@ -4,8 +4,8 @@ import math
 import socket
 import network
 
-SSID = 'BlueSwarm'  # Network SSID
-KEY = 'Tpossr236'  # Network key
+SSID = 'SwarmGarden'  # Network SSID
+KEY = 'swarmgardenhorray123!'  # Network key
 
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
@@ -59,27 +59,22 @@ def degrees(radians):
 def relative_position(tagCX,tagCY, neighborCX, neighborCY):
     dx = tagCX - neighborCX
     dy = tagCY - neighborCY
+    #dist = math.sqrt(dy**2 + dx**2)
 
-    proximity_y_threshold = 10  # Adjust this threshold based on your needs
-
-    if abs(dx) > 75 or abs(dy) > 75:
+    if abs(dx) > 80 and abs(dy) > 100 or abs(dy) > 112 or abs(dx) > 112:
         return "far"
-    elif abs(dx) < proximity_y_threshold and dy > 0:
-        return 'top'
-    elif abs(dx) < proximity_y_threshold and dy < 0:
+    elif tagCY < neighborCY and abs(dy) < 112 and abs(dx) < 10:
         return 'bottom'
-    elif dx < 0 and abs(dy) < proximity_y_threshold:
-        return 'right'
-    elif dx > 0 and abs(dy) < proximity_y_threshold:
-        return 'left'
-    elif dx < 0 and dy > 0:
-        return 'topright'
-    elif dx < 0 and dy < 0:
+    elif tagCY > neighborCY and abs(dy) < 112 and abs(dx) < 10:
+        return 'top'
+    elif dx < 0 and tagCY < neighborCY:
         return 'bottomright'
-    elif dx > 0 and dy > 0:
-        return 'topleft'
-    elif dx > 0 and dy < 0:
+    elif dx < 0 and tagCY > neighborCY:
+        return 'topright'
+    elif dx > 0 and tagCY < neighborCY:
         return 'bottomleft'
+    elif dx > 0 and tagCY > neighborCY:
+        return 'topleft'
     else:
         return 'unknown'
 
@@ -101,7 +96,7 @@ while True:
         img.draw_rectangle(tag.rect(), color=(255, 0, 0))
         img.draw_cross(tag.cx(), tag.cy(), color=(0, 255, 0))
 
-        neighbors = calculate_neighbors(tag, detected_modules, num_neighbors=9)
+        neighbors = calculate_neighbors(tag, detected_modules, num_neighbors=7)
 
         print_args = (
             tag.id(),
@@ -111,8 +106,11 @@ while True:
             neighbors
         )
 
-        sendData = f"neighborsUpdate {print_args[0]} {neighbors_string(tag.cx(), tag.cy(), print_args[4])}"
-
+        sendData = f"neighborsUpdate {tag.id()} {neighbors_string(tag.cx(), tag.cy(), neighbors)}"
         print(sendData)
 
+#        if tag.id() == 1:
+#            print(tag.cx(),tag.cy())
+#        if tag.id() == 2:
+#            print(tag.cx(),tag.cy())
         server.sendto(sendData.encode(), ('255.255.255.255', 50000 + print_args[0]))
