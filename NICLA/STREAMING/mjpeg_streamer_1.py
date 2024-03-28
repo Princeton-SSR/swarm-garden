@@ -14,8 +14,8 @@ import network
 import socket
 import pyb
 
-SSID = "BlueSwarm"  # Network SSID
-KEY = "Tpossr236"  # Network key
+SSID = "SwarmGarden"  # Network SSID
+KEY = "swarmgardenhorray123!"  # Network key
 HOST = ""  # Use first available interface
 PORT = 8082  # Arbitrary non-privileged port
 
@@ -34,7 +34,7 @@ while not wlan.isconnected():
     time.sleep_ms(1000)
 
 
-wlan.ifconfig(('192.168.0.247', '255.255.255.0', '192.168.0.1', '192.168.0.1'))
+wlan.ifconfig(('192.168.0.247', '255.255.255.0', '192.168.2.1', '192.168.2.1'))
 
 # We should have a valid IP now via DHCP
 print("WiFi Connected ", wlan.ifconfig())

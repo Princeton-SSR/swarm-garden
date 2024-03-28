@@ -28,7 +28,7 @@ data = ""
 # set up network
 network_if = network.WLAN(network.STA_IF)
 network_if.active(True)
-network_if.connect("BlueSwarm", "Tpossr236")
+network_if.connect("SwarmGarden", "swarmgardenhorray123!")
 while not network_if.isconnected():
     print("Trying to connect. Note this may take a while...")
     time.sleep_ms(1000)

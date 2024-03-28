@@ -29,20 +29,6 @@ sensor.set_pixformat(sensor.RGB565)  # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)  # Set frame size to QVGA (320x240)
 sensor.set_windowing((240, 240))  # Set 240x240 window.
 
-min_confidence = 0.25
-
-# Load built-in FOMO face detection model
-labels, net = tf.load_builtin_model("fomo_face_detection")
-
-colors = [  # Add more colors if you are detecting more than 7 types of classes at once.
-    (255, 0, 0),
-    (0, 255, 0),
-    (255, 255, 0),
-    (0, 0, 255),
-    (255, 0, 255),
-    (0, 255, 255),
-    (255, 255, 255),
-]
 
 i2c = SoftI2C(scl=Pin('PB8', Pin.OUT_PP, Pin.PULL_NONE), sda=Pin('PB9'))
 mcp = mcp23017.MCP23017(i2c, 0x22)
@@ -63,8 +49,8 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 
 # must match the id of the attached April Tag
 module_ID = 9
-bloom_thresh = 49
 unbloom_thresh = 66
+bloom_thresh = 49
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
@@ -82,7 +68,7 @@ LEDcolor = ""
 # background LED strip color
 LEDStripColor = "(0,0,0)"
 
-# we will append this to the ifconfig to route camera streams properly
+# we will append this to the  to route camera streams properly
 webhost_unique = str(200 + module_ID)
 
 # used for checking when the last command was recieved
@@ -105,9 +91,9 @@ while not wlan.isconnected():
     time.sleep_ms(1000)
 
 
-HOST ='192.168.0.' + webhost_unique
+HOST = '192.168.2.73'
 
-wlan.ifconfig((HOST, '255.255.255.0', '192.168.0.1', '192.168.0.1'))
+wlan.ifconfig((HOST, '255.255.255.0', '192.168.2.1', '192.168.2.1'))
 
 blueLED.on() # visual indicator for successful wifi connection
 # We should have a valid IP now via DHCP
@@ -275,9 +261,12 @@ def parse_message(message):
 
 # takes in list of neighbors and LED strip color to propogate to neighbors
 def forward_strip_to_neighbors(neighbors, incoming_rgb, prevSender):
+    global module_ID
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-        if neighbor[1] is not prevSender and neighbor[0] is not 'far':
+        print(prevSender)
+        if neighbor[1] != prevSender and neighbor[0] is not 'far':
+            print(neighbor)
             sendData = "stripUpdate" + " " + str(module_ID) + " " + "rgb:" + incoming_rgb
             try:
                 s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
@@ -286,11 +275,10 @@ def forward_strip_to_neighbors(neighbors, incoming_rgb, prevSender):
 
 
 def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, prevSender, direction):
-    print(str(rgb))
+    global module_ID
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-        # do CONTAINS direction to get right top AND bottom etc.
-        if neighbor[1] is not prevSender and neighbor[0] is direction:
+        if neighbor[1] != prevSender and neighbor[0] is direction:
             sendData = "stripDirectionUpdate" + " " + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
             try:
                 print(neighbor)
@@ -301,10 +289,10 @@ def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, prevSende
 
 # takes in list of neighbors and bloom to propogate to neighbors
 def forward_bloom_to_neighbors(neighbors, bloom, prevSender):
-
+    global module_ID
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-        if neighbor[1] is not prevSender:
+        if neighbor[1] != prevSender and neighbor[0] is not 'far':
             sendData = "bloomUpdate" + " " + str(module_ID) + " " + "bloom:" + bloom
             try:
                 s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
@@ -313,10 +301,10 @@ def forward_bloom_to_neighbors(neighbors, bloom, prevSender):
 
 # takes in list of neighbors and color to propogate to neighbors
 def forward_LED_color_to_neighbors(neighbors, color, prevSender):
-
+    global module_ID
     # for each neighbor, forward color message to their module_ID PORT
     for neighbor in neighbors:
-        if neighbor[1] is not prevSender:
+        if neighbor[1] != prevSender and neighbor[0] is not 'far':
             sendData = "LEDColorUpdate" + " " + str(module_ID) + " " + "color:" + color
             try:
                 s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
@@ -325,10 +313,10 @@ def forward_LED_color_to_neighbors(neighbors, color, prevSender):
 
 # takes in list of neighbors and color to propogate to neighbors
 def forward_LED_color_to_neighbors_direction(neighbors, color, prevSender, direction):
-
+    global module_ID
     # for each neighbor, forward color message to their module_ID PORT
     for neighbor in neighbors:
-        if neighbor[1] is not prevSender and neighbor[0] is direction:
+        if neighbor[1] != prevSender and neighbor[0] is direction:
             sendData = "LEDColorDirectionUpdate" + " " + str(module_ID) + " " + "color:" + color + " " + "direction:" + direction
             try:
                 print(neighbor)
@@ -383,26 +371,27 @@ def handle_bloom_update(data):
     dist_from_stop = tof2.read()
 
     if bloom is "unbloom":
-#        forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
         while dist_from_stop < unbloom_thresh:
             listeningOn = False
+
             upwards()
 
             # at the halfway point propagate
-            if dist_from_stop == ((unbloom_thresh + bloom_thresh) // 2):
+            if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
+                print('unbloom sent')
                 forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
 
             dist_from_stop = tof2.read()
 
     if bloom is "bloom":
-#        forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
         while dist_from_stop > bloom_thresh:
             listeningOn = False
 
             downwards()
 
             # at the halfway point propagate
-            if dist_from_stop == ((unbloom_thresh + bloom_thresh) // 2):
+            if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
+                print('bloom sent')
                 forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
 
             dist_from_stop = tof2.read()
@@ -411,14 +400,12 @@ def handle_bloom_update(data):
     stop()
 
 # Define the fading speed (in seconds)
-FADE_SPEED = 0.01  # Adjust this value for the desired speed
+#FADE_SPEED = 0.01  # Adjust this value for the desired speed
 
-def fade_color(old_color, new_color, fade_speed):
+def fade_color(old_color, new_color):
     """
     Fade from the old color to the new color gradually.
     """
-    if old_color == new_color:
-        return new_color
 
     # Convert string format to tuple of integers
     old_color = tuple(map(int, old_color[1:-1].split(',')))
@@ -426,18 +413,24 @@ def fade_color(old_color, new_color, fade_speed):
 
     r_old, g_old, b_old = old_color
     r_new, g_new, b_new = new_color
+
+    if old_color == new_color:
+        return [(r_new, g_new, b_new)]
+
     # Calculate the incremental steps for each color channel
     step_r = (r_new - r_old) / max(abs(r_new - r_old), 1)
     step_g = (g_new - g_old) / max(abs(g_new - g_old), 1)
     step_b = (b_new - b_old) / max(abs(b_new - b_old), 1)
 
+    color_steps = []
     # Fade towards the new color gradually
     while (r_old, g_old, b_old) != new_color:
         r_old = int(r_old + step_r)
         g_old = int(g_old + step_g)
         b_old = int(b_old + step_b)
-        yield (r_old, g_old, b_old)
-        time.sleep(fade_speed)
+        color_steps.append((r_old, g_old, b_old))
+
+    return color_steps
 
 def handle_strip_update(data):
     global LEDStripColor
@@ -447,50 +440,61 @@ def handle_strip_update(data):
     message_type, sender_id, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
+    if LEDStripColor == incoming_rgb:
+        return
     # Remove the outer parentheses and split the string into a list of strings
     rgb_values_str = incoming_rgb[1:-1].split(',')
 
     # Convert each string to an integer
     rgb = tuple(int(value) for value in rgb_values_str)
 
-    listeningOn = False
-    for color in fade_color(LEDStripColor, incoming_rgb, FADE_SPEED):
+    # Define the fading speed (in seconds)
+    FADE_SPEED = 0.01  # Adjust this value for the desired speed
+
+    for color in fade_color(LEDStripColor, incoming_rgb):
            # Draw gradient
         for i in range(n):
             np[i] = color
-
         # Update the strip.
         np.write()
+        time.sleep(FADE_SPEED)
 
     LEDStripColor = incoming_rgb
 
     forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id)
-    listeningOn = True
+
 
 def handle_strip_direction_update(data):
     global LEDStripColor
     global neighbors_list
+    global listeningOn
 
     message_type, sender_id, content = parse_message(data)
     incoming_rgb = content["rgb"]
     direction = content["direction"]
 
+    if LEDStripColor == incoming_rgb:
+        return
     # Remove the outer parentheses and split the string into a list of strings
     rgb_values_str = incoming_rgb[1:-1].split(',')
 
     # Convert each string to an integer
     rgb = tuple(int(value) for value in rgb_values_str)
 
-    for color in fade_color(LEDStripColor, incoming_rgb, FADE_SPEED):
+    # Define the fading speed (in seconds)
+    FADE_SPEED = 0.01  # Adjust this value for the desired speed
+
+    for color in fade_color(LEDStripColor, incoming_rgb):
            # Draw gradient
         for i in range(n):
             np[i] = color
-
         # Update the strip.
         np.write()
+        time.sleep(FADE_SPEED)
 
     LEDStripColor = incoming_rgb
 
+    #forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id)
     forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id, direction)
 
 
@@ -671,15 +675,15 @@ def MPEG_streaming(s, webserver):
                     elif "stripDirectionUpdate" in data:
                         handle_strip_direction_update(data)
 
-        # if no commands have happened in the last 20 seconds, return to base conditions
-        if time.time() - last_command_time >= stabilize_time:
-                return_to_base_conditions()
+#        # if no commands have happened in the last 20 seconds, return to base conditions
+#        if time.time() - last_command_time >= stabilize_time:
+#                return_to_base_conditions()
 
 
 ###############################################################################
 
 while(True):
-    print(tof2.read())
+#    print(tof2.read())
     ##################### MODE MANAGEMENT ######################
     if mode == "mpegPose":
         try:
