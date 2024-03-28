@@ -48,9 +48,9 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 ########################## MODULE VARIABLES ###############################
 
 # must match the id of the attached April Tag
-module_ID = 9
-unbloom_thresh = 66
-bloom_thresh = 49
+module_ID = 6
+unbloom_thresh = 125
+bloom_thresh = 106
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
@@ -59,8 +59,8 @@ neighbors_list = []
 # current mode
 mode = "idle"
 
-# on board LED color
-LEDcolor = ""
+# on board LED color (starts as blue (3) after wifi connection)
+LEDColor = "3"
 
 # how far the flower has bloomed, not sure if we need to track this here
 #bloom = tof2.read()
@@ -91,7 +91,7 @@ while not wlan.isconnected():
     time.sleep_ms(1000)
 
 
-HOST = '192.168.2.73'
+HOST = '192.168.2.81'
 
 wlan.ifconfig((HOST, '255.255.255.0', '192.168.2.1', '192.168.2.1'))
 
@@ -277,8 +277,11 @@ def forward_strip_to_neighbors(neighbors, incoming_rgb, prevSender):
 def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, prevSender, direction):
     global module_ID
     # for each neighbor, forward bloom message to their module_ID PORT
+
+    print(direction)
     for neighbor in neighbors:
-        if neighbor[1] != prevSender and neighbor[0] is direction:
+        if neighbor[1] != prevSender and neighbor[0] == direction:
+            print(neighbor)
             sendData = "stripDirectionUpdate" + " " + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
             try:
                 print(neighbor)
@@ -515,6 +518,100 @@ def handle_LED_color_direction_update(data):
     forward_LED_color_to_neighbors_direction(neighbors_list, incoming_color, sender_id, direction)
 
 
+
+# Handling module state variables without propagation
+
+def handle_bloom_self(data):
+    global bloom_thresh
+    global unbloom_thresh
+    global listeningOn
+
+    message_type, sender_id, content = parse_message(data)
+    bloom = content["bloom"]
+
+    dist_from_stop = tof2.read()
+
+    if bloom is "unbloom":
+        while dist_from_stop < unbloom_thresh:
+            listeningOn = False
+
+            upwards()
+
+            # at the halfway point propagate
+            if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
+                print('unbloom sent')
+                forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
+
+            dist_from_stop = tof2.read()
+
+    if bloom is "bloom":
+        while dist_from_stop > bloom_thresh:
+            listeningOn = False
+
+            downwards()
+
+            # at the halfway point propagate
+            if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
+                print('bloom sent')
+                forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
+
+            dist_from_stop = tof2.read()
+
+    listeningOn = True
+    stop()
+
+    return
+
+def handle_strip_self(data):
+    global LEDStripColor
+
+    message_type, sender_id, content = parse_message(data)
+    incoming_rgb = content["rgb"]
+
+    if LEDStripColor == incoming_rgb:
+        return
+    # Remove the outer parentheses and split the string into a list of strings
+    rgb_values_str = incoming_rgb[1:-1].split(',')
+
+    # Convert each string to an integer
+    rgb = tuple(int(value) for value in rgb_values_str)
+
+    # Define the fading speed (in seconds)
+    FADE_SPEED = 0.01  # Adjust this value for the desired speed
+
+    for color in fade_color(LEDStripColor, incoming_rgb):
+           # Draw gradient
+        for i in range(n):
+            np[i] = color
+        # Update the strip.
+        np.write()
+        time.sleep(FADE_SPEED)
+
+    LEDStripColor = incoming_rgb
+
+    return
+
+def handle_LED_self(data):
+    global LEDColor
+
+    message_type, sender_id, content = parse_message(data)
+    incoming_color = content["color"]
+
+    if LEDColor == incoming_color:
+        redLED.off()
+        greenLED.off()
+        blueLED.off()
+        return
+
+    redLED.off()
+    greenLED.off()
+    blueLED.off()
+    pyb.LED(int(incoming_color)).on()
+
+    LEDColor = incoming_color
+
+    return
+
 def return_to_base_conditions():
     global LEDStripColor
     global unbloom_thresh
@@ -577,6 +674,12 @@ def idle_listening(s):
                             handle_strip_update(data)
                         elif "stripDirectionUpdate" in data:
                             handle_strip_direction_update(data)
+                        elif "bloomSelf" in data:
+                            handle_bloom_self(data)
+                        elif "stripSelf" in data:
+                            handle_strip_self(data)
+                        elif "LEDSelf" in data:
+                            handle_LED_self(data)
 
         # if no commands have happened in the last 20 seconds, return to base conditions
         # need to test this check for LEDStripColor and bloom
@@ -683,7 +786,7 @@ def MPEG_streaming(s, webserver):
 ###############################################################################
 
 while(True):
-#    print(tof2.read())
+    print(tof2.read())
     ##################### MODE MANAGEMENT ######################
     if mode == "mpegPose":
         try:
