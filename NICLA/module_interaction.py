@@ -48,13 +48,16 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 ########################## MODULE VARIABLES ###############################
 
 # must match the id of the attached April Tag
-module_ID = 6
-unbloom_thresh = 125
-bloom_thresh = 106
+module_ID = 1
+unbloom_thresh = 71
+bloom_thresh = 51
+
+# shimstock sheet color
+sheetColor = "yellow"
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
-neighbors_list = []
+neighbors_list = [('top','13')]
 
 # current mode
 mode = "idle"
@@ -262,6 +265,8 @@ def parse_message(message):
 # takes in list of neighbors and LED strip color to propogate to neighbors
 def forward_strip_to_neighbors(neighbors, incoming_rgb, prevSender):
     global module_ID
+
+    print("propagating strip")
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
         print(prevSender)
@@ -272,7 +277,6 @@ def forward_strip_to_neighbors(neighbors, incoming_rgb, prevSender):
                 s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
             except OSError as e:
                 print("Error sending UDP message:", e)
-
 
 def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, prevSender, direction):
     global module_ID
@@ -288,7 +292,6 @@ def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, prevSende
                 s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
             except OSError as e:
                 print("Error sending UDP message:", e)
-
 
 # takes in list of neighbors and bloom to propogate to neighbors
 def forward_bloom_to_neighbors(neighbors, bloom, prevSender):
@@ -344,6 +347,8 @@ def handle_mode_update(data):
         mode = "mpegPose"
     elif "wearable" in data:
         mode = "wearable"
+    elif "proximityColor" in data:
+        mode = "proximityColor"
     else:
         mode = "idle"
 
@@ -418,20 +423,21 @@ def fade_color(old_color, new_color):
     r_new, g_new, b_new = new_color
 
     if old_color == new_color:
-        return [(r_new, g_new, b_new)]
+        return [new_color]
+
+    # Calculate the total number of steps needed
+    num_steps = max(abs(r_new - r_old), abs(g_new - g_old), abs(b_new - b_old))
+
+    # Ensure we have at least one step
+    num_steps = max(num_steps, 1)
 
     # Calculate the incremental steps for each color channel
-    step_r = (r_new - r_old) / max(abs(r_new - r_old), 1)
-    step_g = (g_new - g_old) / max(abs(g_new - g_old), 1)
-    step_b = (b_new - b_old) / max(abs(b_new - b_old), 1)
+    step_r = (r_new - r_old) / num_steps
+    step_g = (g_new - g_old) / num_steps
+    step_b = (b_new - b_old) / num_steps
 
-    color_steps = []
-    # Fade towards the new color gradually
-    while (r_old, g_old, b_old) != new_color:
-        r_old = int(r_old + step_r)
-        g_old = int(g_old + step_g)
-        b_old = int(b_old + step_b)
-        color_steps.append((r_old, g_old, b_old))
+    # Generate color steps
+    color_steps = [(int(r_old + i * step_r), int(g_old + i * step_g), int(b_old + i * step_b)) for i in range(num_steps)]
 
     return color_steps
 
@@ -445,6 +451,7 @@ def handle_strip_update(data):
 
     if LEDStripColor == incoming_rgb:
         return
+
     # Remove the outer parentheses and split the string into a list of strings
     rgb_values_str = incoming_rgb[1:-1].split(',')
 
@@ -499,6 +506,7 @@ def handle_strip_direction_update(data):
 
     #forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id)
     forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id, direction)
+
 
 
 def handle_LED_color_direction_update(data):
@@ -646,6 +654,10 @@ def idle_listening(s):
     global last_command_time
     global listeningOn
 
+    #lets us know we've entered new mode
+    handle_strip_self("stripSelf x rgb:(100,100,100)")
+    time.sleep(2)
+
     while True:
         evts = poller.poll(10)
 
@@ -690,6 +702,68 @@ def idle_listening(s):
 #                listeningOn = True
 
 
+########## PROXIMITY COLOR MODE #############
+
+def proximity_color(s):
+    global neighbors_list
+    global LEDColor
+    global mode
+    global last_command_time
+    global listeningOn
+    global sheetColor
+
+    listeningOn = True
+
+    #lets us know we've entered new mode
+    handle_strip_self("stripSelf x rgb:(100,100,100)")
+    time.sleep(2)
+
+    while True:
+
+        proximity = tof.read()
+
+
+        if proximity < 500:
+            if sheetColor == "orange":
+                handle_strip_update("stripUpdate x rgb:(100,25,0)")
+            elif sheetColor == "yellow":
+                handle_strip_update("stripUpdate x rgb:(100,60,0)")
+            elif sheetColor == "red":
+                handle_strip_update("stripUpdate x rgb:(100,5,0)")
+
+        evts = poller.poll(10)
+
+        ##################### MESSAGE + STATE MANAGEMENT ######################
+
+        for sock, evt in evts:
+            if evt and select.POLLIN:
+                if sock == s:
+                    data, addr = s.recvfrom(1024)
+                    data = data.decode()
+
+                    last_command_time = time.time()
+
+                    if "neighborsUpdate" in data:
+                        handle_neighbors_update(data)
+                    elif "modeUpdate" in data:
+                        handle_mode_update(data)
+                        return
+                    elif "LEDColorUpdate" in data:
+                        handle_LED_color_update(data)
+                    elif "LEDColorDirectionUpdate" in data:
+                        handle_LED_color_direction_update(data)
+                    elif "bloomUpdate" in data:
+                        handle_bloom_update(data)
+                    elif "stripUpdate" in data:
+                        handle_strip_update(data)
+                    elif "stripDirectionUpdate" in data:
+                        handle_strip_direction_update(data)
+                    elif "bloomSelf" in data:
+                        handle_bloom_self(data)
+                    elif "stripSelf" in data:
+                        handle_strip_self(data)
+                    elif "LEDSelf" in data:
+                        handle_LED_self(data)
 
 ##################@### WEBSERVER SOCKET + STREAMING / LISTENING ################
 
@@ -716,6 +790,10 @@ def MPEG_streaming(s, webserver):
     global module_ID
     global mode
     global last_command_time
+
+    #lets us know we've entered new mode
+    handle_strip_self("stripSelf x rgb:(100,100,100)")
+    time.sleep(2)
 
     print("Waiting for connections..")
     client, addr = webserver.accept()
@@ -786,7 +864,8 @@ def MPEG_streaming(s, webserver):
 ###############################################################################
 
 while(True):
-    print(tof2.read())
+
+    #print(tof.read())
     ##################### MODE MANAGEMENT ######################
     if mode == "mpegPose":
         try:
@@ -795,5 +874,7 @@ while(True):
             print("Reconnect Camera")
     elif mode == "wearable":
         print("wearable")
+    elif mode == "proximityColor":
+        proximity_color(s)
     else:
         idle_listening(s)
