@@ -48,12 +48,12 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 ########################## MODULE VARIABLES ###############################
 
 # must match the id of the attached April Tag
-module_ID = 13
-unbloom_thresh = 71
-bloom_thresh = 51
+module_ID = 10
+unbloom_thresh = 79
+bloom_thresh = 60
 
 # shimstock sheet color
-sheetColor = "red"
+sheetColor = "yellow"
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
@@ -724,6 +724,8 @@ def proximity_color(s):
 
 
         if proximity < 800:
+            listeningOn = False
+
             if sheetColor == "orange":
                 handle_strip_update("stripUpdate x rgb:(150,40,0)")
             elif sheetColor == "yellow":
@@ -731,41 +733,42 @@ def proximity_color(s):
             elif sheetColor == "red":
                 handle_strip_update("stripUpdate x rgb:(150,3,0)")
         else:
-            handle_strip_update("stripUpdate x rgb:(0,0,0)")
+            listeningOn = True
+            handle_strip_self("stripSelf x rgb:(0,0,0)")
 
         evts = poller.poll(10)
 
-        ##################### MESSAGE + STATE MANAGEMENT ######################
+            ##################### MESSAGE + STATE MANAGEMENT ######################
+        if listeningOn:
+            for sock, evt in evts:
+                if evt and select.POLLIN:
+                    if sock == s:
+                        data, addr = s.recvfrom(1024)
+                        data = data.decode()
 
-        for sock, evt in evts:
-            if evt and select.POLLIN:
-                if sock == s:
-                    data, addr = s.recvfrom(1024)
-                    data = data.decode()
+                        last_command_time = time.time()
 
-                    last_command_time = time.time()
-
-                    if "neighborsUpdate" in data:
-                        handle_neighbors_update(data)
-                    elif "modeUpdate" in data:
-                        handle_mode_update(data)
-                        return
-                    elif "LEDColorUpdate" in data:
-                        handle_LED_color_update(data)
-                    elif "LEDColorDirectionUpdate" in data:
-                        handle_LED_color_direction_update(data)
-                    elif "bloomUpdate" in data:
-                        handle_bloom_update(data)
-                    elif "stripUpdate" in data:
-                        handle_strip_update(data)
-                    elif "stripDirectionUpdate" in data:
-                        handle_strip_direction_update(data)
-                    elif "bloomSelf" in data:
-                        handle_bloom_self(data)
-                    elif "stripSelf" in data:
-                        handle_strip_self(data)
-                    elif "LEDSelf" in data:
-                        handle_LED_self(data)
+                        if "neighborsUpdate" in data:
+                            handle_neighbors_update(data)
+                        elif "modeUpdate" in data:
+                            handle_mode_update(data)
+                            return
+                        elif "LEDColorUpdate" in data:
+                            handle_LED_color_update(data)
+                        elif "LEDColorDirectionUpdate" in data:
+                            handle_LED_color_direction_update(data)
+                        elif "bloomUpdate" in data:
+                            handle_bloom_update(data)
+                        elif "stripUpdate" in data:
+                            handle_strip_update(data)
+                        elif "stripDirectionUpdate" in data:
+                            handle_strip_direction_update(data)
+                        elif "bloomSelf" in data:
+                            handle_bloom_self(data)
+                        elif "stripSelf" in data:
+                            handle_strip_self(data)
+                        elif "LEDSelf" in data:
+                            handle_LED_self(data)
 
 ##################@### WEBSERVER SOCKET + STREAMING / LISTENING ################
 
