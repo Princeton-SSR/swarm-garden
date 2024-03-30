@@ -48,16 +48,16 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 ########################## MODULE VARIABLES ###############################
 
 # must match the id of the attached April Tag
-module_ID = 1
+module_ID = 13
 unbloom_thresh = 71
 bloom_thresh = 51
 
 # shimstock sheet color
-sheetColor = "yellow"
+sheetColor = "red"
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
-neighbors_list = [('top','13')]
+neighbors_list = []
 
 # current mode
 mode = "idle"
@@ -459,7 +459,7 @@ def handle_strip_update(data):
     rgb = tuple(int(value) for value in rgb_values_str)
 
     # Define the fading speed (in seconds)
-    FADE_SPEED = 0.01  # Adjust this value for the desired speed
+    FADE_SPEED = 0.005  # Adjust this value for the desired speed
 
     for color in fade_color(LEDStripColor, incoming_rgb):
            # Draw gradient
@@ -723,13 +723,15 @@ def proximity_color(s):
         proximity = tof.read()
 
 
-        if proximity < 500:
+        if proximity < 800:
             if sheetColor == "orange":
-                handle_strip_update("stripUpdate x rgb:(100,25,0)")
+                handle_strip_update("stripUpdate x rgb:(150,40,0)")
             elif sheetColor == "yellow":
-                handle_strip_update("stripUpdate x rgb:(100,60,0)")
+                handle_strip_update("stripUpdate x rgb:(150,105,0)")
             elif sheetColor == "red":
-                handle_strip_update("stripUpdate x rgb:(100,5,0)")
+                handle_strip_update("stripUpdate x rgb:(150,3,0)")
+        else:
+            handle_strip_update("stripUpdate x rgb:(0,0,0)")
 
         evts = poller.poll(10)
 
