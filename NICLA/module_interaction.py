@@ -60,7 +60,7 @@ sheetColor = "yellow"
 neighbors_list = []
 
 # current mode
-mode = "idle"
+mode = "wearable"
 
 # on board LED color (starts as blue (3) after wifi connection)
 LEDColor = "3"
@@ -599,6 +599,81 @@ def handle_strip_self(data):
 
     return
 
+def handle_pulse(data):
+    m = 0
+    step = 0
+    global LEDStripColor
+
+    p = Pin('PG12', Pin.OUT_PP, Pin.PULL_NONE)
+    np = neopixel.NeoPixel(p, 60)
+    n = np.n
+
+    message_type, sender_id, content = parse_message(data)
+    incoming_rgb = content["rgb"]
+
+    pulse = content["pulse"]
+
+    if LEDStripColor == incoming_rgb:
+        return
+    # Remove the outer parentheses and split the string into a list of strings
+    rgb_values_str = incoming_rgb[1:-1].split(',')
+
+    # Convert each string to an integer
+    rgb = tuple(int(value) for value in rgb_values_str)
+
+    # Define the fading speed (in seconds)
+
+    if (pulse == "short"):
+        m = 3
+        step = 2
+        print("short")
+        greenLED.on()
+        redLED.off()
+        blueLED.off()
+    elif (pulse == "medium"):
+        m = 3
+        step = 6
+        print("medium")
+        greenLED.off()
+        redLED.on(),
+        blueLED.off()
+    elif (pulse == "long"):
+        m = 3
+        step = 10
+        print("long")
+        greenLED.off()
+        redLED.off(),
+        blueLED.on()
+    elif (pulse == "changeMode"):
+        m = 3
+        step = 14
+        print("change mode")
+        greenLED.on()
+        redLED.on(),
+        blueLED.off()
+
+    for _ in range(m):
+        for i in range(0, 4 * 256, step):
+            for j in range(n):
+                if (i // 256) % 2 == 0:
+                    val = i & 0xff
+                else:
+                    val = 255 - (i & 0xff)
+                np[j] = (val, 0, 0)
+            np.write()
+        evts = poller.poll(0)  # Non-blocking
+        if evts:
+            break  # Exit if new data is available to handle it immediately
+
+    for i in range(n):
+        np[i] = (0, 0, 0)
+    np.write()
+
+
+    LEDStripColor = "(0, 0, 0)"
+
+    return
+
 def handle_LED_self(data):
     global LEDColor
 
@@ -645,7 +720,9 @@ def return_to_base_conditions():
 
 stabilize_time = 20  # seconds until return to base conditions runs
 
+
 ########################### IDLE MESSAGE LISTENING ##########################
+
 
 def idle_listening(s):
     global neighbors_list
@@ -700,6 +777,60 @@ def idle_listening(s):
 #                return_to_base_conditions()
 #                time.sleep(5)
 #                listeningOn = True
+
+########## WEARABLE MODE #############
+
+def wearable(s):
+    global neighbors_list
+    global LEDColor
+    global mode
+    global last_command_time
+    global listeningOn
+
+    #lets us know we've entered new mode
+    handle_strip_self("stripSelf x rgb:(100,100,100)")
+    time.sleep(2)
+
+    while True:
+        evts = poller.poll(10)
+
+        ##################### MESSAGE + STATE MANAGEMENT ######################
+        if listeningOn:
+            for sock, evt in evts:
+                if evt and select.POLLIN:
+                    if sock == s:
+                        data, addr = s.recvfrom(1024)
+                        data = data.decode()
+
+                        last_command_time = time.time()
+
+                        if "neighborsUpdate" in data:
+                            handle_neighbors_update(data)
+                        elif "modeUpdate" in data:
+                            handle_mode_update(data)
+                            return
+                        elif "LEDColorUpdate" in data:
+                            handle_LED_color_update(data)
+                        elif "LEDColorDirectionUpdate" in data:
+                            handle_LED_color_direction_update(data)
+                        elif "bloomUpdate" in data:
+                            handle_bloom_update(data)
+                        elif "stripUpdate" in data:
+                            handle_strip_update(data)
+                        elif "stripDirectionUpdate" in data:
+                            handle_strip_direction_update(data)
+                        elif "bloomSelf" in data:
+                            handle_bloom_self(data)
+                        elif "stripSelf" in data:
+                            handle_strip_self(data)
+                        elif "LEDSelf" in data:
+                            handle_LED_self(data)
+                        elif "wearablePulse" in data:
+                            handle_pulse(data)
+                        elif "wearableExpand" in data:
+                            handle_expand(data)
+                        elif "wearableIMU" in data:
+                            handle_imu(data)
 
 
 ########## PROXIMITY COLOR MODE #############
@@ -878,7 +1009,7 @@ while(True):
         except:
             print("Reconnect Camera")
     elif mode == "wearable":
-        print("wearable")
+        wearable(s)
     elif mode == "proximityColor":
         proximity_color(s)
     else:
