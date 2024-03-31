@@ -48,16 +48,16 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 ########################## MODULE VARIABLES ###############################
 
 # must match the id of the attached April Tag
-module_ID = 10
+module_ID = 5
 unbloom_thresh = 79
 bloom_thresh = 60
 
 # shimstock sheet color
-sheetColor = "yellow"
+sheetColor = "orange"
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
-neighbors_list = []
+neighbors_list = [('right','1'), ('left', '11')]
 
 # current mode
 mode = "wearable"
@@ -248,14 +248,18 @@ def parse_message(message):
         return "n/a", "n/a", None
 
     message_type = parts[0]
-    sender_id = parts[1]
+    sender_id_string = parts[1]
+    prev_senders = []
     content = {}
+
+    prev_senders = sender_id_string.split(",")
 
     for part in parts[2:]:
         key, value = part.split(":")
         content[key] = value
 
-    return message_type, sender_id, content
+    return message_type, sender_id_string, prev_senders, content
+
 
 ###################################################################
 
@@ -263,72 +267,90 @@ def parse_message(message):
 ##################### FORWARDING FUNCTIONS ########################
 
 # takes in list of neighbors and LED strip color to propogate to neighbors
-def forward_strip_to_neighbors(neighbors, incoming_rgb, prevSender):
+def forward_strip_to_neighbors(neighbors, incoming_rgb, sender_id_string, prev_senders):
     global module_ID
 
-    print("propagating strip")
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-        print(prevSender)
-        if neighbor[1] != prevSender and neighbor[0] is not 'far':
-            print(neighbor)
-            sendData = "stripUpdate" + " " + str(module_ID) + " " + "rgb:" + incoming_rgb
-            try:
-                s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-            except OSError as e:
-                print("Error sending UDP message:", e)
 
-def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, prevSender, direction):
+        for prev in prev_senders:
+            if neighbor[1] == prev:
+                continue
+            elif neighbor[0] is not 'far':
+                sendData = "stripUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb
+                print(sendData + " to module:" + neighbor[1])
+                try:
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
+
+def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, sender_id_string, prev_senders, direction):
     global module_ID
-    # for each neighbor, forward bloom message to their module_ID PORT
 
-    print(direction)
+    # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-        if neighbor[1] != prevSender and neighbor[0] == direction:
-            print(neighbor)
-            sendData = "stripDirectionUpdate" + " " + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
-            try:
+
+        for prev in prev_senders:
+            if neighbor[1] == prev:
+                continue
+            elif neighbor[0] == direction:
                 print(neighbor)
-                s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-            except OSError as e:
-                print("Error sending UDP message:", e)
+                sendData = "stripDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
+                try:
+                    print(neighebor)
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
 
 # takes in list of neighbors and bloom to propogate to neighbors
-def forward_bloom_to_neighbors(neighbors, bloom, prevSender):
+def forward_bloom_to_neighbors(neighbors, bloom, sender_id_string, prev_senders):
     global module_ID
+
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-        if neighbor[1] != prevSender and neighbor[0] is not 'far':
-            sendData = "bloomUpdate" + " " + str(module_ID) + " " + "bloom:" + bloom
-            try:
-                s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-            except OSError as e:
-                print("Error sending UDP message:", e)
+
+        for prev in prev_senders:
+            if neighbor[1] == prev:
+                continue
+            elif neighbor[0] is not 'far':
+                sendData = "bloomUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "bloom:" + bloom
+                try:
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
 
 # takes in list of neighbors and color to propogate to neighbors
-def forward_LED_color_to_neighbors(neighbors, color, prevSender):
+def forward_LED_color_to_neighbors(neighbors, color, sender_id_string, prev_senders):
     global module_ID
     # for each neighbor, forward color message to their module_ID PORT
     for neighbor in neighbors:
-        if neighbor[1] != prevSender and neighbor[0] is not 'far':
-            sendData = "LEDColorUpdate" + " " + str(module_ID) + " " + "color:" + color
-            try:
-                s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-            except OSError as e:
-                print("Error sending UDP message:", e)
+
+        for prev in prev_senders:
+            if neighbor[1] == prev:
+                continue
+            elif neighbor[0] is not 'far':
+                sendData = "LEDColorUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color
+                try:
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
 
 # takes in list of neighbors and color to propogate to neighbors
-def forward_LED_color_to_neighbors_direction(neighbors, color, prevSender, direction):
+def forward_LED_color_to_neighbors_direction(neighbors, color, sender_id_string, prev_senders, direction):
     global module_ID
     # for each neighbor, forward color message to their module_ID PORT
     for neighbor in neighbors:
-        if neighbor[1] != prevSender and neighbor[0] is direction:
-            sendData = "LEDColorDirectionUpdate" + " " + str(module_ID) + " " + "color:" + color + " " + "direction:" + direction
-            try:
-                print(neighbor)
-                s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-            except OSError as e:
-                print("Error sending UDP message:", e)
+
+        for prev in prev_senders:
+            if neighbor[1] == prev:
+                continue
+            elif neighbor[0] == direction:
+                sendData = "LEDColorDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color + " " + "direction:" + direction
+                try:
+                    print(neighbor)
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
 
 
 ########################### UPDATE HANDLING ##########################
@@ -336,7 +358,7 @@ def forward_LED_color_to_neighbors_direction(neighbors, color, prevSender, direc
 def handle_neighbors_update(data):
     global neighbors_list
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     neighbors_list = list(content.items())
     print("neighbors updated to: " + str(neighbors_list))
 
@@ -356,7 +378,7 @@ def handle_LED_color_update(data):
     global LEDColor
     global neighbors_list
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_color = content["color"]
 
     redLED.off()
@@ -365,7 +387,7 @@ def handle_LED_color_update(data):
     pyb.LED(int(incoming_color)).on()
 
     LEDColor = incoming_color
-    forward_LED_color_to_neighbors(neighbors_list, incoming_color, sender_id)
+    forward_LED_color_to_neighbors(neighbors_list, incoming_color, sender_id_string, prev_senders)
 
 def handle_bloom_update(data):
     global neighbors_list
@@ -373,7 +395,7 @@ def handle_bloom_update(data):
     global unbloom_thresh
     global listeningOn
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     bloom = content["bloom"]
 
     dist_from_stop = tof2.read()
@@ -387,7 +409,7 @@ def handle_bloom_update(data):
             # at the halfway point propagate
             if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
                 print('unbloom sent')
-                forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
+                forward_bloom_to_neighbors(neighbors_list, bloom, sender_id_string, prev_senders)
 
             dist_from_stop = tof2.read()
 
@@ -400,7 +422,7 @@ def handle_bloom_update(data):
             # at the halfway point propagate
             if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
                 print('bloom sent')
-                forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
+                forward_bloom_to_neighbors(neighbors_list, bloom, sender_id_string, prev_senders)
 
             dist_from_stop = tof2.read()
 
@@ -446,11 +468,17 @@ def handle_strip_update(data):
     global neighbors_list
     global listeningOn
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
+    # if i'm already at this color don't do anything
     if LEDStripColor == incoming_rgb:
         return
+
+    # if i'm already a previous sender of this info don't do anything
+    for prev in prev_senders:
+        if str(module_ID) == prev:
+            return
 
     # Remove the outer parentheses and split the string into a list of strings
     rgb_values_str = incoming_rgb[1:-1].split(',')
@@ -471,7 +499,7 @@ def handle_strip_update(data):
 
     LEDStripColor = incoming_rgb
 
-    forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id)
+    forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id_string, prev_senders)
 
 
 def handle_strip_direction_update(data):
@@ -479,7 +507,7 @@ def handle_strip_direction_update(data):
     global neighbors_list
     global listeningOn
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_rgb = content["rgb"]
     direction = content["direction"]
 
@@ -504,8 +532,7 @@ def handle_strip_direction_update(data):
 
     LEDStripColor = incoming_rgb
 
-    #forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id)
-    forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id, direction)
+    forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, direction)
 
 
 
@@ -513,7 +540,7 @@ def handle_LED_color_direction_update(data):
     global LEDColor
     global neighbors_list
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_color = content["color"]
     direction = content["direction"]
 
@@ -523,7 +550,7 @@ def handle_LED_color_direction_update(data):
     pyb.LED(int(incoming_color)).on()
 
     LEDColor = incoming_color
-    forward_LED_color_to_neighbors_direction(neighbors_list, incoming_color, sender_id, direction)
+    forward_LED_color_to_neighbors_direction(neighbors_list, incoming_color, sender_id_string, prev_senders, direction)
 
 
 
@@ -534,7 +561,7 @@ def handle_bloom_self(data):
     global unbloom_thresh
     global listeningOn
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     bloom = content["bloom"]
 
     dist_from_stop = tof2.read()
@@ -545,11 +572,6 @@ def handle_bloom_self(data):
 
             upwards()
 
-            # at the halfway point propagate
-            if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
-                print('unbloom sent')
-                forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
-
             dist_from_stop = tof2.read()
 
     if bloom is "bloom":
@@ -557,11 +579,6 @@ def handle_bloom_self(data):
             listeningOn = False
 
             downwards()
-
-            # at the halfway point propagate
-            if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
-                print('bloom sent')
-                forward_bloom_to_neighbors(neighbors_list, bloom, sender_id)
 
             dist_from_stop = tof2.read()
 
@@ -573,7 +590,7 @@ def handle_bloom_self(data):
 def handle_strip_self(data):
     global LEDStripColor
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
     if LEDStripColor == incoming_rgb:
@@ -608,7 +625,7 @@ def handle_pulse(data):
     np = neopixel.NeoPixel(p, 60)
     n = np.n
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
     pulse = content["pulse"]
@@ -677,7 +694,7 @@ def handle_pulse(data):
 def handle_LED_self(data):
     global LEDColor
 
-    message_type, sender_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_color = content["color"]
 
     if LEDColor == incoming_color:
@@ -842,6 +859,10 @@ def proximity_color(s):
     global last_command_time
     global listeningOn
     global sheetColor
+
+
+    # select random interaction result: bloom,unbloom,LED
+    #random_inter = random.randint(1, 3)
 
     listeningOn = True
 
