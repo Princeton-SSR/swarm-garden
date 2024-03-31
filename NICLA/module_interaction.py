@@ -229,7 +229,7 @@ def upwards():
                 mcp.pin(1, mode=0, value=0)
                 mcp.pin(2, mode=0, value=0)
                 mcp.pin(3, mode=0, value=0)
-            time.sleep( step_sleep)
+            time.sleep(step_sleep)
 
 def stop():
     mcp.pin(0, mode=0, value=0)
@@ -501,7 +501,6 @@ def handle_strip_update(data):
 
     forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id_string, prev_senders)
 
-
 def handle_strip_direction_update(data):
     global LEDStripColor
     global neighbors_list
@@ -534,8 +533,6 @@ def handle_strip_direction_update(data):
 
     forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, direction)
 
-
-
 def handle_LED_color_direction_update(data):
     global LEDColor
     global neighbors_list
@@ -553,8 +550,7 @@ def handle_LED_color_direction_update(data):
     forward_LED_color_to_neighbors_direction(neighbors_list, incoming_color, sender_id_string, prev_senders, direction)
 
 
-
-# Handling module state variables without propagation
+##### Changing module state variables without propagation #####
 
 def handle_bloom_self(data):
     global bloom_thresh
@@ -586,6 +582,7 @@ def handle_bloom_self(data):
     stop()
 
     return
+
 
 def handle_strip_self(data):
     global LEDStripColor
@@ -861,8 +858,8 @@ def proximity_color(s):
     global sheetColor
 
 
-    # select random interaction result: bloom,unbloom,LED
-    #random_inter = random.randint(1, 3)
+    # select random interaction result: bloom, unbloom, LED
+    selection = random.randint(1, 3)
 
     listeningOn = True
 
@@ -872,25 +869,39 @@ def proximity_color(s):
 
     while True:
 
-        proximity = tof.read()
+        if selection == 1:
+            proximity = tof.read()
 
+            if proximity < 800:
+                listeningOn = False
 
-        if proximity < 800:
-            listeningOn = False
+                if sheetColor == "orange":
+                    handle_strip_update("stripUpdate x rgb:(150,40,0)")
+                elif sheetColor == "yellow":
+                    handle_strip_update("stripUpdate x rgb:(150,105,0)")
+                elif sheetColor == "red":
+                    handle_strip_update("stripUpdate x rgb:(150,3,0)")
+            else:
+                listeningOn = True
+                handle_strip_self("stripSelf x rgb:(0,0,0)")
 
-            if sheetColor == "orange":
-                handle_strip_update("stripUpdate x rgb:(150,40,0)")
-            elif sheetColor == "yellow":
-                handle_strip_update("stripUpdate x rgb:(150,105,0)")
-            elif sheetColor == "red":
-                handle_strip_update("stripUpdate x rgb:(150,3,0)")
-        else:
-            listeningOn = True
-            handle_strip_self("stripSelf x rgb:(0,0,0)")
+            evts = poller.poll(10)
 
-        evts = poller.poll(10)
+        elif selection == 2:
 
-            ##################### MESSAGE + STATE MANAGEMENT ######################
+            proximity = tof.read()
+
+            if proximity < 800:
+                handle_bloom_update("bloomUpdate x bloom:bloom")
+
+        elif selection == 2:
+
+            proximity = tof.read()
+
+            if proximity < 800:
+                handle_bloom_update("bloomUpdate x bloom:unbloom")
+
+        ##################### MESSAGE + STATE MANAGEMENT ######################
         if listeningOn:
             for sock, evt in evts:
                 if evt and select.POLLIN:
@@ -1012,11 +1023,6 @@ def MPEG_streaming(s, webserver):
                         handle_strip_update(data)
                     elif "stripDirectionUpdate" in data:
                         handle_strip_direction_update(data)
-
-#        # if no commands have happened in the last 20 seconds, return to base conditions
-#        if time.time() - last_command_time >= stabilize_time:
-#                return_to_base_conditions()
-
 
 ###############################################################################
 
