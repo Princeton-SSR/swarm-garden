@@ -48,19 +48,19 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 ########################## MODULE VARIABLES ###############################
 
 # must match the id of the attached April Tag
-module_ID = 15
-unbloom_thresh = 79
-bloom_thresh = 60
+module_ID = 5
+unbloom_thresh = 90
+bloom_thresh = 70
 
 # shimstock sheet color
 sheetColor = "orange"
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
-neighbors_list = [('right','1'), ('left', '11')]
+neighbors_list = []
 
 # current mode
-mode = "wearable"
+mode = "idle"
 
 # on board LED color (starts as blue (3) after wifi connection)
 LEDColor = "3"
@@ -130,7 +130,6 @@ np.write()
 
 # careful lowering this, at some point you run into the mechanical limitation of how quick your motor can move
 step_sleep = 0.005
-current_motion = "stop"
 step_count = 200
 
 step_max = 0
@@ -205,7 +204,37 @@ def downwards():
                 mcp.pin(1, mode=0, value=0)
                 mcp.pin(2, mode=0, value=0)
                 mcp.pin(3, mode=0, value=1)
-            time.sleep( step_sleep)
+
+            evts = poller.poll(0)
+
+            for sock, evt in evts:
+                if evt and select.POLLIN:
+                    if sock == s:
+                        data, addr = s.recvfrom(1024)
+                        data = data.decode()
+
+                        last_command_time = time.time()
+
+                        if "LEDColorUpdate" in data:
+                            handle_LED_color_update(data)
+                        elif "LEDColorDirectionUpdate" in data:
+                            handle_LED_color_direction_update(data)
+                        elif "bloomUpdate" in data:
+                            handle_bloom_update(data)
+                            return False
+                        elif "stripUpdate" in data:
+                            handle_strip_update(data)
+                        elif "stripDirectionUpdate" in data:
+                            handle_strip_direction_update(data)
+                        elif "bloomSelf" in data:
+                            handle_bloom_self(data)
+                            return False
+                        elif "stripSelf" in data:
+                            handle_strip_self(data)
+                        elif "LEDSelf" in data:
+                            handle_LED_self(data)
+            time.sleep(step_sleep)
+        return True
 
 def upwards():
         for i in range(step_count):
@@ -229,7 +258,37 @@ def upwards():
                 mcp.pin(1, mode=0, value=0)
                 mcp.pin(2, mode=0, value=0)
                 mcp.pin(3, mode=0, value=0)
+
+            evts = poller.poll(0)
+
+            for sock, evt in evts:
+                if evt and select.POLLIN:
+                    if sock == s:
+                        data, addr = s.recvfrom(1024)
+                        data = data.decode()
+
+                        last_command_time = time.time()
+
+                        if "LEDColorUpdate" in data:
+                            handle_LED_color_update(data)
+                        elif "LEDColorDirectionUpdate" in data:
+                            handle_LED_color_direction_update(data)
+                        elif "bloomUpdate" in data:
+                            handle_bloom_update(data)
+                            return False
+                        elif "stripUpdate" in data:
+                            handle_strip_update(data)
+                        elif "stripDirectionUpdate" in data:
+                            handle_strip_direction_update(data)
+                        elif "bloomSelf" in data:
+                            handle_bloom_self(data)
+                            return False
+                        elif "stripSelf" in data:
+                            handle_strip_self(data)
+                        elif "LEDSelf" in data:
+                            handle_LED_self(data)
             time.sleep(step_sleep)
+        return True
 
 def stop():
     mcp.pin(0, mode=0, value=0)
@@ -404,7 +463,12 @@ def handle_bloom_update(data):
         while dist_from_stop < unbloom_thresh:
             listeningOn = False
 
-            upwards()
+            check = upwards()
+
+            if check == False:
+                listeningOn = True
+                stop()
+                return()
 
             # at the halfway point propagate
             if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
@@ -417,7 +481,12 @@ def handle_bloom_update(data):
         while dist_from_stop > bloom_thresh:
             listeningOn = False
 
-            downwards()
+            check = downwards()
+
+            if check == False:
+                listeningOn = True
+                stop()
+                return()
 
             # at the halfway point propagate
             if ((unbloom_thresh + bloom_thresh) // 2) - 2 <= dist_from_stop <= ((unbloom_thresh + bloom_thresh) // 2) + 2:
@@ -599,7 +668,12 @@ def handle_bloom_self(data):
         while dist_from_stop < unbloom_thresh:
             listeningOn = False
 
-            upwards()
+            check = upwards()
+
+            if check == False:
+                listeningOn = True
+                stop()
+                return
 
             dist_from_stop = tof2.read()
 
@@ -607,7 +681,12 @@ def handle_bloom_self(data):
         while dist_from_stop > bloom_thresh:
             listeningOn = False
 
-            downwards()
+            check = downwards()
+
+            if check == False:
+                listeningOn = True
+                stop()
+                return
 
             dist_from_stop = tof2.read()
 
@@ -1013,7 +1092,10 @@ def proximity_color(s):
 
 
     # select random interaction result: bloom, unbloom, LED
-    selection = random.randint(1, 3)
+#    selection = random.randint(1, 3)
+
+    # setting to color for now, blooming ones are weird
+    selection = 1
 
     listeningOn = True
 
@@ -1023,9 +1105,9 @@ def proximity_color(s):
 
     while True:
 
+        # LED Coloring Mode
         if selection == 1:
             proximity = tof.read()
-
             if proximity < 800:
                 listeningOn = False
 
@@ -1037,10 +1119,9 @@ def proximity_color(s):
                     handle_strip_update("stripUpdate x rgb:(150,3,0)")
             else:
                 listeningOn = True
-                handle_strip_self("stripSelf x rgb:(0,0,0)")
+#                handle_strip_self("stripSelf x rgb:(0,0,0)")
 
-            evts = poller.poll(10)
-
+        # Bloom Mode
         elif selection == 2:
 
             proximity = tof.read()
@@ -1048,12 +1129,15 @@ def proximity_color(s):
             if proximity < 800:
                 handle_bloom_update("bloomUpdate x bloom:bloom")
 
-        elif selection == 2:
+        # Unbloom Mode
+        elif selection == 3:
 
             proximity = tof.read()
 
             if proximity < 800:
                 handle_bloom_update("bloomUpdate x bloom:unbloom")
+
+        evts = poller.poll(10)
 
         ##################### MESSAGE + STATE MANAGEMENT ######################
         if listeningOn:
