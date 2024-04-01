@@ -17,7 +17,7 @@ import neopixel
 import mcp23017
 from machine import I2C
 from vl53l1x import VL53L1X
-
+import random
 ######################### SENSORS + BOARD STUFF #########################
 
 redLED = pyb.LED(1) # built-in red LED
@@ -48,7 +48,7 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 ########################## MODULE VARIABLES ###############################
 
 # must match the id of the attached April Tag
-module_ID = 5
+module_ID = 15
 unbloom_thresh = 79
 bloom_thresh = 60
 
@@ -550,6 +550,39 @@ def handle_LED_color_direction_update(data):
     forward_LED_color_to_neighbors_direction(neighbors_list, incoming_color, sender_id_string, prev_senders, direction)
 
 
+def handle_expand(data):
+    global LEDStripColor
+    global neighbors_list
+    global module_ID
+
+    # Parse the received data to get the LED color, if necessary
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
+
+    # Extract the current LED color if sent within the data or use the global one
+    incoming_rgb = content.get("rgb", LEDStripColor)
+
+    expand = content["expand"]
+
+#    module_picked = random.randint(0, 35)
+    module_picked = 2
+
+    if module_ID == module_picked:
+        if expand == "short":
+            for i in range(n):
+                np[i] = incoming_rgb
+            np.write()
+
+        elif expand == "medium":
+            if len(prev_senders) == 0:
+                forward_strip_to_neighbors(neighbors, incoming_rgb, sender_id_string, prev_senders)
+        elif expand == "long":
+                forward_strip_to_neighbors(neighbors, incoming_rgb, sender_id_string, prev_senders)
+        else:
+            for i in range(n):
+                np[i] = (0, 0, 0)
+            np.write()
+
+
 ##### Changing module state variables without propagation #####
 
 def handle_bloom_self(data):
@@ -687,6 +720,127 @@ def handle_pulse(data):
     LEDStripColor = "(0, 0, 0)"
 
     return
+
+#def handle_imu(data):
+
+##    global LEDStripColor
+##    global neighbors_list
+##    global listeningOn
+
+##    message_type, sender_id_string, prev_senders, content = parse_message(data)
+##    incoming_rgb = content["rgb"]
+##    direction = content["direction"]
+
+##    if LEDStripColor == incoming_rgb:
+##        return
+##    # Remove the outer parentheses and split the string into a list of strings
+##    rgb_values_str = incoming_rgb[1:-1].split(',')
+
+##    # Convert each string to an integer
+##    rgb = tuple(int(value) for value in rgb_values_str)
+
+##    # Define the fading speed (in seconds)
+##    FADE_SPEED = 0.01  # Adjust this value for the desired speed
+
+##    for color in fade_color(LEDStripColor, incoming_rgb):
+##           # Draw gradient
+##        for i in range(n):
+##            np[i] = color
+##        # Update the strip.
+##        np.write()
+##        time.sleep(FADE_SPEED)
+
+##    LEDStripColor = incoming_rgb
+
+##    forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, direction)
+
+#    m = 0
+#    step = 0
+#    global LEDStripColor
+
+#    p = Pin('PG12', Pin.OUT_PP, Pin.PULL_NONE)
+#    np = neopixel.NeoPixel(p, 60)
+#    n = np.n
+
+#    message_type, sender_id_string, prev_senders, content = parse_message(data)
+#    incoming_rgb = content["rgb"]
+
+#    direction = content["direction"]
+
+#    if LEDStripColor == incoming_rgb:
+#        return
+#    # Remove the outer parentheses and split the string into a list of strings
+#    rgb_values_str = incoming_rgb[1:-1].split(',')
+
+#    # Convert each string to an integer
+#    rgb = tuple(int(value) for value in rgb_values_str)
+
+#    # Define the fading speed (in seconds)
+
+#    if (direction == "x-axis-up"):
+#        m = 3
+#        step = 2
+#        print("x-axis-up")
+#        greenLED.on()
+#        redLED.off()
+#        blueLED.off()
+#    elif (direction == "x-axis-down"):
+#        m = 3
+#        step = 6
+#        print("x-axis-down")
+#        greenLED.off()
+#        redLED.on(),
+#        blueLED.off()
+#    elif (direction == "y-axis-up"):
+#        m = 3
+#        step = 10
+#        print("y-axis-up")
+#        greenLED.off()
+#        redLED.off(),
+#        blueLED.on()
+#    elif (direction == "y-axis-down"):
+#        m = 3
+#        step = 14
+#        print("y-axis-down")
+#        greenLED.on()
+#        redLED.on(),
+#        blueLED.off()
+#    elif (direction == "z-axis-up"):
+#        m = 3
+#        step = 10
+#        print("z-axis-up")
+#        greenLED.off()
+#        redLED.off(),
+#        blueLED.on()
+#    elif (direction == "z-axis-down"):
+#        m = 3
+#        step = 14
+#        print("z-axis-down")
+#        greenLED.on()
+#        redLED.on(),
+#        blueLED.off()
+
+#    for _ in range(m):
+#        for i in range(0, 4 * 256, step):
+#            for j in range(n):
+#                if (i // 256) % 2 == 0:
+#                    val = i & 0xff
+#                else:
+#                    val = 255 - (i & 0xff)
+#                np[j] = (val, 0, 0)
+#            np.write()
+#        evts = poller.poll(0)  # Non-blocking
+#        if evts:
+#            break  # Exit if new data is available to handle it immediately
+
+#    for i in range(n):
+#        np[i] = (0, 0, 0)
+#    np.write()
+
+
+#    LEDStripColor = "(0, 0, 0)"
+
+#    return
 
 def handle_LED_self(data):
     global LEDColor

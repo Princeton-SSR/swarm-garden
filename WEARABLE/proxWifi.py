@@ -42,7 +42,10 @@ network_if.active(True)
 network_if.connect("SwarmGarden", "swarmgardenhorray123!")
 while not network_if.isconnected():
     print("Trying to connect. Note this may take a while...")
+    blue_led.on()
     time.sleep_ms(1000)
+
+blue_led.off()
 
 #while True:
 #    red_led.on()
@@ -99,7 +102,7 @@ while True:
                         red_led.off()
                         blue_led.on()
                         green_led.off()
-                    elif (elapsed >= 6000):
+                    elif (7000 > elapsed >= 6000):
                         change_Mode_prox = True
                         sendData = "change prox mode"
                         print(sendData)
@@ -125,12 +128,20 @@ while True:
             server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
 
     elif change_Mode_all == False and change_Mode_prox == True:
+
         print("here1")
         start = pyb.millis()
     #    last_sent = sendData
     #    print(f"Distance: {tof.read()}mm")
         if (tof.read() < 50):
-    #        sequence = []
+            if (elapsed >= 7000):
+                change_Mode_all = True
+                sendData = "change to IMU"
+                print(sendData)
+                red_led.off()
+                blue_led.off()
+                green_led.on()
+#        sequence = []
             current_time = pyb.millis()
             elapsed = current_time - start
             while (tof.read() < 50):
@@ -138,20 +149,20 @@ while True:
                 print(pyb.elapsed_millis(start))
                 if elapsed <= 8000:
                     if elapsed < 500:
-                        sendData = "wearableExpand X pulse:short rgb:(100,0,100)"
+                        sendData = "wearableExpand X expand:short rgb:(100,0,100)"
                         print(sendData)
                         red_led.on()
                         blue_led.on()
                         green_led.on()
 
                     elif (1000 <= elapsed < 1500):
-                        sendData = "wearableExpand X pulse:medium rgb:(100,0,100)"
+                        sendData = "wearableExpand X expand:medium rgb:(50,0,100)"
                         print(sendData)
                         red_led.on()
                         blue_led.off()
                         green_led.off()
                     elif (2000 <= elapsed < 4000):
-                        sendData = "wearableExpand X pulse:long rgb:(100,0,100)"
+                        sendData = "wearableExpand X expand:long rgb:(0,0,100)"
                         print(sendData)
                         red_led.off()
                         blue_led.on()

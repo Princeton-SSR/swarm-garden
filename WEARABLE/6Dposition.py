@@ -159,7 +159,10 @@ while True:
 #            sendData = UCF_LABELS[buf[0]]
 #            print(sendData)
 
-    server.sendto(sendData.encode(), ('255.255.255.255', 40000))
-    server.sendto(sendData.encode(), ('255.255.255.255', 40000))
-    server.sendto(sendData.encode(), ('255.255.255.255', 40000))
-    server.sendto(sendData.encode(), ('255.255.255.255', 40000))
+    if sendData == "none":
+        continue
+    else:
+        server.sendto(sendData.encode(), ('255.255.255.255', 40000))
+        server.sendto(sendData.encode(), ('255.255.255.255', 40000))
+        server.sendto(sendData.encode(), ('255.255.255.255', 40000))
+        server.sendto(sendData.encode(), ('255.255.255.255', 40000))
