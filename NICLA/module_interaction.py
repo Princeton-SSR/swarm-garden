@@ -48,12 +48,12 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 ########################## MODULE VARIABLES ###############################
 
 # must match the id of the attached April Tag
-module_ID = 5
-unbloom_thresh = 90
-bloom_thresh = 70
+module_ID = 2
+unbloom_thresh = 79
+bloom_thresh = 60
 
-# shimstock sheet color
-sheetColor = "orange"
+# shimstock sheet color: orange, yellow, or red
+sheetColor = "red"
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
@@ -541,8 +541,8 @@ def handle_strip_update(data):
     incoming_rgb = content["rgb"]
 
     # if i'm already at this color don't do anything
-    if LEDStripColor == incoming_rgb:
-        return
+#    if LEDStripColor == incoming_rgb:
+#        return
 
     # if i'm already a previous sender of this info don't do anything
     for prev in prev_senders:
@@ -579,8 +579,9 @@ def handle_strip_direction_update(data):
     incoming_rgb = content["rgb"]
     direction = content["direction"]
 
-    if LEDStripColor == incoming_rgb:
-        return
+#    if LEDStripColor == incoming_rgb:
+#        return
+
     # Remove the outer parentheses and split the string into a list of strings
     rgb_values_str = incoming_rgb[1:-1].split(',')
 
@@ -702,8 +703,9 @@ def handle_strip_self(data):
     message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
-    if LEDStripColor == incoming_rgb:
-        return
+#    if LEDStripColor == incoming_rgb:
+#        return
+
     # Remove the outer parentheses and split the string into a list of strings
     rgb_values_str = incoming_rgb[1:-1].split(',')
 
@@ -1092,10 +1094,10 @@ def proximity_color(s):
 
 
     # select random interaction result: bloom, unbloom, LED
-#    selection = random.randint(1, 3)
+    selection = random.randint(1, 3)
 
     # setting to color for now, blooming ones are weird
-    selection = 1
+#    selection = 1
 
     listeningOn = True
 
@@ -1126,7 +1128,7 @@ def proximity_color(s):
 
             proximity = tof.read()
 
-            if proximity < 800:
+            if proximity < 400:
                 handle_bloom_update("bloomUpdate x bloom:bloom")
 
         # Unbloom Mode
@@ -1134,7 +1136,7 @@ def proximity_color(s):
 
             proximity = tof.read()
 
-            if proximity < 800:
+            if proximity < 400:
                 handle_bloom_update("bloomUpdate x bloom:unbloom")
 
         evts = poller.poll(10)
@@ -1235,7 +1237,7 @@ def MPEG_streaming(s, webserver):
         client.sendall(header)
         client.sendall(cframe)
 
-        evts = poller.poll(10)
+        evts = poller.poll(0)
 
         ##################### MESSAGE + STATE MANAGEMENT ######################
         for sock, evt in evts:
@@ -1243,7 +1245,7 @@ def MPEG_streaming(s, webserver):
                 if sock == s:
                     data, addr = s.recvfrom(1024)
                     data = data.decode()
-
+                    print(data)
                     last_command_time = time.time()
 
                     if "neighborsUpdate" in data:
@@ -1266,7 +1268,7 @@ def MPEG_streaming(s, webserver):
 
 while(True):
 
-    #print(tof.read())
+#    print(tof2.read())
     ##################### MODE MANAGEMENT ######################
     if mode == "mpegPose":
         try:
