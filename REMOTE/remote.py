@@ -7,7 +7,7 @@ server.bind(("", 20000))
 
 for i in range(36):
         for _ in range(3):
-            sendData = "modeUpdate proximityColor"
+            sendData = "modeUpdate wearable"
             server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
 
 # while True:

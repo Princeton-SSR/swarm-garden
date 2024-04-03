@@ -71,7 +71,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 0
+module_ID = 13
 
 info = get_module_info(module_ID)
 
@@ -385,7 +385,6 @@ def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, sender_id
                 print(neighbor)
                 sendData = "stripDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
                 try:
-                    print(neighebor)
                     s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
                 except OSError as e:
                     print("Error sending UDP message:", e)
@@ -661,18 +660,24 @@ def handle_expand(data):
 
     # Extract the current LED color if sent within the data or use the global one
     incoming_rgb = content["rgb"]
-
     expand = content["expand"]
+
+    # Remove the outer parentheses and split the string into a list of strings
+    rgb_values_str = incoming_rgb[1:-1].split(',')
+
+    # Convert each string to an integer
+    rgb = tuple(int(value) for value in rgb_values_str)
 
     if expand == "short":
         print("short expand")
-        for i in range(n):
-            np[i] = incoming_rgb
-        np.write()
+        handle_strip_self("stripSelf X rgb:" + incoming_rgb)
         return
 
     elif expand == "medium":
         print("medium expand")
+
+        handle_strip_self("stripSelf X rgb:" + incoming_rgb)
+
         for neighbor in neighbors_list:
             for prev in prev_senders:
                 if neighbor[1] == prev:
@@ -687,6 +692,7 @@ def handle_expand(data):
 
     elif expand == "long":
         print("long expand")
+        handle_strip_self("stripSelf X rgb:" + incoming_rgb)
         forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id_string, prev_senders)
     else:
         for i in range(n):
@@ -853,18 +859,21 @@ def handle_imu(data):
 
     if (direction == "x-axis-up"):
         print("x up")
+        handle_strip_self("stripSelf X rgb:" + incoming_rgb)
         LEDStripColor = incoming_rgb
         forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id_string, prev_senders)
     elif (direction == "z-axis-up"):
         print("z up")
+        handle_strip_self("stripSelf X rgb:" + incoming_rgb)
         LEDStripColor = incoming_rgb
-        forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "topright")
-        forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "bottomright")
+        forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, "topright")
+        forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, "bottomright")
     elif (direction == "z-axis-down"):
         print("z down")
+        handle_strip_self("stripSelf X rgb:" + incoming_rgb)
         LEDStripColor = incoming_rgb
-        forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "topleft")
-        forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "bottomleft")
+        forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, "topleft")
+        forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, "bottomleft")
     elif (direction == "impact"):
         print("impact")
         for j in range(n):
