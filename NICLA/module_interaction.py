@@ -874,17 +874,15 @@ def handle_imu(data):
         LEDStripColor = incoming_rgb
         forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, "topleft")
         forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, "bottomleft")
-    elif (direction == "impact"):
-        print("impact")
-        for j in range(n):
-            np[j] = (100, 100, 100)
-        np.write()
-        time.sleep(0.2)
-        for j in range(n):
-            np[j] = (0, 0, 0)
-        np.write()
+    elif (direction == "y-axis-up"):
+        print("y up")
+        handle_strip_self("stripSelf X rgb:" + incoming_rgb)
+        LEDStripColor = incoming_rgb
 
-        LEDStripColor = "(0,0,0)"
+    elif (direction == "y-axis-down"):
+        print("y down")
+        handle_strip_self("stripSelf X rgb:" + incoming_rgb)
+        LEDStripColor = incoming_rgb
 
     return
 
