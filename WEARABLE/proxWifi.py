@@ -202,7 +202,8 @@ while True:
             blue_led.off()
             continue
 
-        module_picked = random.randint(0, 35)
+#        module_picked = random.randint(0, 35)
+        module_picked = 1
         server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
 
     elif change_Mode_all == True:
@@ -240,7 +241,8 @@ while True:
             if accel_x > UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:x-axis-up rgb:(100,0,50)"
                 print("X-axis is up.")
-                module_picked = random.randint(0, 35)
+                module_picked = 1
+#                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -248,7 +250,8 @@ while True:
             elif accel_x < -UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:x-axis-down rgb:(100,100,0)"
                 print("X-axis is down.")
-                module_picked = random.randint(0, 35)
+                module_picked = 1
+#                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -258,7 +261,8 @@ while True:
             if accel_y > UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:y-axis-up rgb:(100,50,0)"
                 print("Y-axis is up.")
-                module_picked = random.randint(0, 35)
+                module_picked = 1
+#                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -266,7 +270,8 @@ while True:
             elif accel_y < -UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:y-axis-down rgb:(50,100,0)"
                 print("Y-axis is down.")
-                module_picked = random.randint(0, 35)
+                module_picked = 1
+#                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -276,7 +281,8 @@ while True:
             if accel_z > UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:z-axis-up rgb:(100,50,50)"
                 print("Z-axis is up.")
-                module_picked = random.randint(0, 35)
+                module_picked = 1
+#                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -284,7 +290,8 @@ while True:
             elif accel_z < -UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:z-axis-down rgb:(0,50,100)"
                 print("Z-axis is down.")
-                module_picked = random.randint(0, 35)
+#                module_picked = random.randint(0, 35)
+                module_picked = 1
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))

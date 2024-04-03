@@ -71,7 +71,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 13
+module_ID = 0
 
 info = get_module_info(module_ID)
 
@@ -662,12 +662,14 @@ def handle_expand(data):
 
     expand = content["expand"]
     if expand == "short":
+        print("short expand")
         for i in range(n):
             np[i] = incoming_rgb
         np.write()
         return
 
     elif expand == "medium":
+        print("medium expand")
         for neighbor in neighbors_list:
             for prev in prev_senders:
                 if neighbor[1] == prev:
@@ -681,7 +683,8 @@ def handle_expand(data):
                         print("Error sending UDP message:", e)
 
     elif expand == "long":
-            forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id_string, prev_senders)
+        print("long expand")
+        forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id_string, prev_senders)
     else:
         for i in range(n):
             np[i] = (0, 0, 0)
@@ -790,30 +793,18 @@ def handle_pulse(data):
         m = 3
         step = 2
         print("short")
-        greenLED.on()
-        redLED.off()
-        blueLED.off()
     elif (pulse == "medium"):
         m = 3
         step = 6
         print("medium")
-        greenLED.off()
-        redLED.on(),
-        blueLED.off()
     elif (pulse == "long"):
         m = 3
         step = 10
         print("long")
-        greenLED.off()
-        redLED.off(),
-        blueLED.on()
-    elif (pulse == "changeMode"):
-        m = 3
-        step = 14
-        print("change mode")
-        greenLED.on()
-        redLED.on(),
-        blueLED.off()
+#    elif (pulse == "changeMode"):
+#        m = 3
+#        step = 14
+#        print("change mode")
 
     for _ in range(m):
         for i in range(0, 4 * 256, step):
@@ -856,17 +847,21 @@ def handle_imu(data):
     # Define the fading speed (in seconds)
 
     if (direction == "x-axis-up"):
+        print("x up")
         LEDStripColor = incoming_rgb
         forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id_string, prev_senders)
     elif (direction == "z-axis-up"):
+        print("z up")
         LEDStripColor = incoming_rgb
         forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "topright")
         forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "bottomright")
     elif (direction == "z-axis-down"):
+        print("z down")
         LEDStripColor = incoming_rgb
         forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "topleft")
         forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "bottomleft")
     elif (direction == "impact"):
+        print("impact")
         for j in range(n):
             np[j] = (100, 100, 100)
         np.write()
