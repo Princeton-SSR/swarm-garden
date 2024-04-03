@@ -47,13 +47,42 @@ tof2 = VL53L0X(i2c, 0x29) # sensor on back of long screw for bloom treshold
 
 ########################## MODULE VARIABLES ###############################
 
+def read_module_info(filename):
+    module_info = {}
+    with open(filename, 'r') as file:
+        for line in file:
+            # Split each line into key-value pairs
+            info = line.strip().split(',')
+            module_id = None
+            module_data = {}
+            for item in info:
+                key, value = item.split(':')
+                if key == 'module_ID':
+                    module_id = int(value)
+                else:
+                    module_data[key] = value
+            if module_id is not None:
+                module_info[module_id] = module_data
+    return module_info
+
+module_info = read_module_info('module_info.txt')
+
+def get_module_info(module_id):
+    return module_info.get(module_id, {})
+
 # must match the id of the attached April Tag
-module_ID = 2
-unbloom_thresh = 79
-bloom_thresh = 60
+module_ID = 0
+
+info = get_module_info(module_ID)
+
+# blooming thresholds for tof2 sensor
+unbloom_thresh = int(info["unbloom_thresh"])
+bloom_thresh = int(info["bloom_thresh"])
 
 # shimstock sheet color: orange, yellow, or red
-sheetColor = "red"
+sheetColor = str(info["sheetColor"])
+
+print("module_ID:", module_ID, "unbloom_thresh:", unbloom_thresh, "bloom_thresh:", bloom_thresh, "sheetColor:", sheetColor)
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
@@ -1100,7 +1129,7 @@ def proximity_color(s):
 
 
     # select random interaction result: bloom, unbloom, LED
-    selection = random.randint(1, 3)
+    selection = random.randint(1, 4)
 
     # setting to color for now, blooming ones are weird
 #    selection = 1
@@ -1144,6 +1173,11 @@ def proximity_color(s):
 
             if proximity < 400:
                 handle_bloom_update("bloomUpdate x bloom:unbloom")
+
+        # Return to Idle Mode
+        elif selection == 4:
+            mode = "idle"
+            return
 
         evts = poller.poll(10)
 
