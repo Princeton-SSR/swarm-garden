@@ -71,7 +71,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 13
+module_ID = 1
 
 info = get_module_info(module_ID)
 
