@@ -30,8 +30,7 @@ module_ID:28,unbloom_thresh:90,bloom_thresh:71,sheetColor:orange
 module_ID:29,unbloom_thresh:0,bloom_thresh:0,sheetColor:red
 module_ID:30,unbloom_thresh:56,bloom_thresh:41,sheetColor:red
 module_ID:31,unbloom_thresh:94,bloom_thresh:70,sheetColor:red
-module_ID:32,unbloom_thresh:79,bloom_thresh:60,sheetColor:red
-module_ID:33,unbloom_thresh:79,bloom_thresh:60,sheetColor:red
-module_ID:34,unbloom_thresh:79,bloom_thresh:60,sheetColor:red
-module_ID:35,unbloom_thresh:79,bloom_thresh:60,sheetColor:red
-module_ID:36,unbloom_thresh:79,bloom_thresh:60,sheetColor:red
+module_ID:32,unbloom_thresh:84,bloom_thresh:57,sheetColor:red
+module_ID:33,unbloom_thresh:55,bloom_thresh:40,sheetColor:orange
+module_ID:34,unbloom_thresh:76,bloom_thresh:65,sheetColor:orange
+module_ID:35,unbloom_thresh:69,bloom_thresh:44,sheetColor:yellow
