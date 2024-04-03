@@ -10,7 +10,7 @@
 import time
 import pyb
 from pyb import LED
-
+import random
 import network
 import omv
 import rtsp
@@ -24,7 +24,31 @@ from machine import I2C
 from vl53l1x import VL53L1X
 import time
 import socket
+
+from machine import Pin
+from machine import SPI
+from lsm6dsox import LSM6DSOX
+import sensor
+import time
+import pyb
+from pyb import LED
+
+import network
+import omv
+import rtsp
+import sensor
+import time
+from pyb import Pin
+import time
+import sys
+# VL53L1X ToF sensor basic distance measurement example.
+from machine import I2C
+from vl53l1x import VL53L1X
+import time
 import socket
+import socket
+import time
+import math
 
 tof = VL53L1X(I2C(2))
 
@@ -72,11 +96,9 @@ change_Mode_all = False
 while True:
     if change_Mode_all == False and change_Mode_prox == False:
         print("here")
+        red_led.on()
         start = pyb.millis()
-    #    last_sent = sendData
-    #    print(f"Distance: {tof.read()}mm")
         if (tof.read() < 50):
-    #        sequence = []
             current_time = pyb.millis()
             elapsed = current_time - start
             while (tof.read() < 50):
@@ -106,8 +128,8 @@ while True:
                         change_Mode_prox = True
                         sendData = "change prox mode"
                         print(sendData)
-                        red_led.on()
-                        blue_led.off()
+                        red_led.off()
+                        blue_led.on()
                         green_led.on()
                     elif (elapsed >= 7000):
                         change_Mode_all = True
@@ -130,18 +152,9 @@ while True:
     elif change_Mode_all == False and change_Mode_prox == True:
 
         print("here1")
+        blue_led.on()
         start = pyb.millis()
-    #    last_sent = sendData
-    #    print(f"Distance: {tof.read()}mm")
         if (tof.read() < 50):
-            if (elapsed >= 7000):
-                change_Mode_all = True
-                sendData = "change to IMU"
-                print(sendData)
-                red_led.off()
-                blue_led.off()
-                green_led.on()
-#        sequence = []
             current_time = pyb.millis()
             elapsed = current_time - start
             while (tof.read() < 50):
@@ -154,7 +167,6 @@ while True:
                         red_led.on()
                         blue_led.on()
                         green_led.on()
-
                     elif (1000 <= elapsed < 1500):
                         sendData = "wearableExpand X expand:medium rgb:(50,0,100)"
                         print(sendData)
@@ -167,7 +179,7 @@ while True:
                         red_led.off()
                         blue_led.on()
                         green_led.off()
-                    elif (elapsed >= 6000):
+                    elif (7000 > elapsed >= 6000):
                         change_Mode_prox = False
                         sendData = "change prox mode"
                         print(sendData)
@@ -195,106 +207,70 @@ while True:
 
     elif change_Mode_all == True:
         print("here2")
-        if (tof.read() < 50):
-            current_time = pyb.millis()
-            if (current_time >= 6000):
-                change_Mode_prox = False
-            if (current_time >= 7000):
-                change_Mode_prox = True
+        lsm = LSM6DSOX(SPI(5), cs=Pin("PF6", Pin.OUT_PP, Pin.PULL_UP))
 
+        # Thresholds
+        UP_DOWN_THRESHOLD = 0.8  # Threshold to detect up or down orientation
+        IMPACT_THRESHOLD = 1.5  # Acceleration threshold to detect an impact
 
-        def imu_int_handler(pin):
-            global INT_FLAG
-            INT_FLAG = True
+        def calculate_magnitude(x, y, z):
+            """Calculate the magnitude of the acceleration vector."""
+            return math.sqrt(x**2 + y**2 + z**2)
 
-
-        if INT_MODE is True:
-            int_pin = Pin("PA1", mode=Pin.IN, pull=Pin.PULL_UP)
-            int_pin.irq(handler=imu_int_handler, trigger=Pin.IRQ_RISING)
-
-        # Vibration detection example
-        UCF_FILE = "lsm6dsox_six_d_position.ucf"
-        UCF_LABELS = {0: "none", 1: "X-axis pointing up", 2: "X-axis pointing down", 3: "Y-axis pointing up", 4: "Y-axis pointing down", 5: "Z-axis pointing up", 6: "Z-axis pointing down"}
-        # NOTE: Selected data rate and scale must match the MLC data rate and scale.
-        lsm = LSM6DSOX(
-            SPI(5),
-            cs=Pin("PF6", Pin.OUT_PP, Pin.PULL_UP),
-            gyro_odr=26,
-            accel_odr=26,
-            gyro_scale=2000,
-            accel_scale=4,
-            ucf=UCF_FILE,
-        )
-
-        # Head gestures example
-        # UCF_FILE = "lsm6dsox_head_gestures.ucf"
-        # UCF_LABELS = {0:"Nod", 1:"Shake", 2:"Stationary", 3:"Swing", 4:"Walk"}
-        # NOTE: Selected data rate and scale must match the MLC data rate and scale.
-        # lsm = LSM6DSOX(SPI(5), cs_pin=Pin("PF6", Pin.OUT_PP, Pin.PULL_UP),
-        #        gyro_odr=26, accel_odr=26, gyro_scale=250, accel_scale=2, ucf=UCF_FILE)
-
-        print("MLC configured...")
-
+        start = pyb.millis()
         while True:
+            green_led.on()
+            while (tof.read() < 50):
+                current_time = pyb.millis()
+                elapsed = current_time - start
+                print(elapsed)
+                if (elapsed >= 7000):
+                    print(elapsed)
+                    change_Mode_all = False
+                    change_Mode_prox = False
+                    break
+                break
+            if change_Mode_all == False:
+                break
             sendData = ""
-            if INT_MODE:
-                if INT_FLAG:
-                    INT_FLAG = False
-                    mlc_output = lsm.mlc_output()
-                    if mlc_output is not None and UCF_LABELS[mlc_output[0]] is not None:
-                        sendData = UCF_LABELS[lsm.mlc_output()[0]]
-        #                if (sendData == "none"):
-        #                    redLED.off()
-        #                    greenLED.on()
-        #                    blueLED.off()
-                        if (sendData == "X-axis pointing up"):
-                            redLED.on()
-                            greenLED.off()
-                            blueLED.off()
+            # Read accelerometer data
+            accel_x, accel_y, accel_z = lsm.accel()
 
-                        elif (sendData == "X-axis pointing down"):
-                            redLED.off()
-                            greenLED.off()
-                            blueLED.on()
-                        elif (sendData == "Y-axis pointing up"):
-                            redLED.on()
-                            greenLED.off()
-                            blueLED.on()
+            # Detect orientation for x-axis
+            if accel_x > UP_DOWN_THRESHOLD:
+                sendData = "wearableIMU X direction:x-axis-up rgb:(100,0,50)"
+                print("X-axis is up.")
+            elif accel_x < -UP_DOWN_THRESHOLD:
+                sendData = "wearableIMU X direction:x-axis-down rgb:(100,100,0)"
+                print("X-axis is down.")
 
-                        elif (sendData == "Y-axis pointing down"):
-                            redLED.on()
-                            greenLED.on()
-                            blueLED.off()
+            # Detect orientation for y-axis
+            if accel_y > UP_DOWN_THRESHOLD:
+                sendData = "wearableIMU X direction:y-axis-up rgb:(100,50,0)"
+                print("Y-axis is up.")
+            elif accel_y < -UP_DOWN_THRESHOLD:
+                sendData = "wearableIMU X direction:y-axis-down rgb:(50,100,0)"
+                print("Y-axis is down.")
 
-                        elif (sendData == "Z-axis pointing up"):
-                            redLED.off()
-                            greenLED.on()
-                            blueLED.on()
+            # Detect orientation for z-axis
+            if accel_z > UP_DOWN_THRESHOLD:
+                sendData = "wearableIMU X direction:z-axis-up rgb:(100,50,50)"
+                print("Z-axis is up.")
+            elif accel_z < -UP_DOWN_THRESHOLD:
+                sendData = "wearableIMU X direction:z-axis-down rgb:(0,50,100)"
+                print("Z-axis is down.")
 
-                        elif (sendData == "Z-axis pointing down"):
-                            redLED.off()
-                            greenLED.off()
-                            blueLED.off()
+            # Detect impact based on acceleration magnitude
+            accel_magnitude = calculate_magnitude(accel_x, accel_y, accel_z) - 1  # Subtract 1g for the stationary effect
+            if accel_magnitude > IMPACT_THRESHOLD:
+                sendData = "wearableIMU X direction:impact rgb:(100,0,0)"
+                print("Impact detected!")
 
-                    else:
-                        sendData = "none"
-                        redLED.off()
-                        greenLED.on()
-                        blueLED.off()
-                    print(sendData)
+            time.sleep_ms(100)
 
 
-        #            if UCF_LABELS[lsm.mlc_output()[0]] == None:
-        #                sendData = "None"
-        ##            sendData = UCF_LABELS[lsm.mlc_output()[0]]
-        #            print(UCF_LABELS[lsm.mlc_output()[0]])
-            else:
-                buf = lsm.mlc_output()
-                if buf is not None and UCF_LABELS[buf[0]] is not None:
-                    sendData = UCF_LABELS[buf[0]]
-                    print(sendData)
-
-            server.sendto(sendData.encode(), ('255.255.255.255', 40000))
+            server.sendto(sendData.encode(), ('255.255.255.255', 50000))
+            server.sendto(sendData.encode(), ('255.255.255.255', 50000))
 
 
 

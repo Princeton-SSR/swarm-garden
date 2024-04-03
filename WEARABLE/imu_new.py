@@ -334,13 +334,13 @@ while True:
     # Detect impact based on acceleration magnitude
     accel_magnitude = calculate_magnitude(accel_x, accel_y, accel_z) - 1  # Subtract 1g for the stationary effect
     if accel_magnitude > IMPACT_THRESHOLD:
-        sendData = "wearableIMU X imu:impact rgb:(100,0,0)"
+        sendData = "wearableIMU X direction:impact rgb:(100,0,0)"
         print("Impact detected!")
 
-#    time.sleep_ms(100)
+    time.sleep_ms(100)
 
 
-#    server.sendto(sendData.encode(), ('255.255.255.255', 40000))
-#    server.sendto(sendData.encode(), ('255.255.255.255', 40000))
-#    server.sendto(sendData.encode(), ('255.255.255.255', 40000))
-#    server.sendto(sendData.encode(), ('255.255.255.255', 40000))
+    server.sendto(sendData.encode(), ('255.255.255.255', 50000))
+    server.sendto(sendData.encode(), ('255.255.255.255', 50000))
+#    server.sendto(sendData.encode(), ('255.255.255.255', 50000))
+#    server.sendto(sendData.encode(), ('255.255.255.255', 50000))
