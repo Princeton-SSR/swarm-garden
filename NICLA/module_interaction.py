@@ -654,13 +654,16 @@ def handle_expand(data):
     global neighbors_list
     global module_ID
 
+    print("handle_expand")
+
     # Parse the received data to get the LED color, if necessary
     message_type, sender_id_string, prev_senders, content = parse_message(data)
 
     # Extract the current LED color if sent within the data or use the global one
-    incoming_rgb = content.get("rgb", LEDStripColor)
+    incoming_rgb = content["rgb"]
 
     expand = content["expand"]
+
     if expand == "short":
         print("short expand")
         for i in range(n):
@@ -832,6 +835,8 @@ def handle_imu(data):
     global LEDStripColor
     global neighbors_list
     global module_ID
+
+    print("handle_imu")
 
     message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_rgb = content["rgb"]

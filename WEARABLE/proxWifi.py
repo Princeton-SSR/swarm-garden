@@ -160,36 +160,37 @@ while True:
             while (tof.read() < 50):
                 elapsed = pyb.elapsed_millis(start)
                 print(pyb.elapsed_millis(start))
+                #        module_picked = random.randint(0, 35)
+                module_picked = 1
                 if elapsed <= 8000:
                     if elapsed < 500:
                         sendData = "wearableExpand X expand:short rgb:(100,0,100)"
+                        server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                         print(sendData)
                         red_led.on()
                         blue_led.on()
                         green_led.on()
                     elif (1000 <= elapsed < 1500):
                         sendData = "wearableExpand X expand:medium rgb:(50,0,100)"
+                        server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                         print(sendData)
                         red_led.on()
                         blue_led.off()
                         green_led.off()
                     elif (2000 <= elapsed < 4000):
                         sendData = "wearableExpand X expand:long rgb:(0,0,100)"
+                        server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                         print(sendData)
                         red_led.off()
                         blue_led.on()
                         green_led.off()
                     elif (7000 > elapsed >= 6000):
                         change_Mode_prox = False
-                        sendData = "change prox mode"
-                        print(sendData)
                         red_led.off()
                         blue_led.off()
                         green_led.on()
                     elif (elapsed >= 7000):
                         change_Mode_all = True
-                        sendData = "change to IMU"
-                        print(sendData)
                         red_led.off()
                         blue_led.off()
                         green_led.on()
@@ -201,10 +202,6 @@ while True:
             green_led.off()
             blue_led.off()
             continue
-
-#        module_picked = random.randint(0, 35)
-        module_picked = 1
-        server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
 
     elif change_Mode_all == True:
         print("here2")
