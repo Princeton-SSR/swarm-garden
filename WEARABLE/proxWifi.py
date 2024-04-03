@@ -161,36 +161,35 @@ while True:
                 elapsed = pyb.elapsed_millis(start)
                 print(pyb.elapsed_millis(start))
                 #        module_picked = random.randint(0, 35)
-                module_picked = 1
+                module_picked = 13
                 if elapsed <= 8000:
                     if elapsed < 500:
                         sendData = "wearableExpand X expand:short rgb:(100,0,100)"
-                        server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                         print(sendData)
                         red_led.on()
                         blue_led.on()
                         green_led.on()
                     elif (1000 <= elapsed < 1500):
                         sendData = "wearableExpand X expand:medium rgb:(50,0,100)"
-                        server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
-                        print(sendData)
                         red_led.on()
                         blue_led.off()
                         green_led.off()
+                        print(sendData)
                     elif (2000 <= elapsed < 4000):
                         sendData = "wearableExpand X expand:long rgb:(0,0,100)"
-                        server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                         print(sendData)
                         red_led.off()
                         blue_led.on()
                         green_led.off()
                     elif (7000 > elapsed >= 6000):
                         change_Mode_prox = False
+                        sendData = ""
                         red_led.off()
-                        blue_led.off()
+                        blue_led.on()
                         green_led.on()
                     elif (elapsed >= 7000):
                         change_Mode_all = True
+                        sendData = ""
                         red_led.off()
                         blue_led.off()
                         green_led.on()
@@ -202,6 +201,7 @@ while True:
             green_led.off()
             blue_led.off()
             continue
+        server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
 
     elif change_Mode_all == True:
         print("here2")
@@ -209,7 +209,7 @@ while True:
 
         # Thresholds
         UP_DOWN_THRESHOLD = 0.8  # Threshold to detect up or down orientation
-        IMPACT_THRESHOLD = 1.5  # Acceleration threshold to detect an impact
+        IMPACT_THRESHOLD = 1.2  # Acceleration threshold to detect an impact
 
         def calculate_magnitude(x, y, z):
             """Calculate the magnitude of the acceleration vector."""
@@ -238,60 +238,66 @@ while True:
             if accel_x > UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:x-axis-up rgb:(100,0,50)"
                 print("X-axis is up.")
-                module_picked = 1
+                module_picked = 13
 #                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
 
             elif accel_x < -UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:x-axis-down rgb:(100,100,0)"
                 print("X-axis is down.")
-                module_picked = 1
+                module_picked = 13
 #                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
 
 
             # Detect orientation for y-axis
             if accel_y > UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:y-axis-up rgb:(100,50,0)"
                 print("Y-axis is up.")
-                module_picked = 1
+                module_picked = 13
 #                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
 
             elif accel_y < -UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:y-axis-down rgb:(50,100,0)"
                 print("Y-axis is down.")
-                module_picked = 1
+                module_picked = 13
 #                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
 
 
             # Detect orientation for z-axis
             if accel_z > UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:z-axis-up rgb:(100,50,50)"
                 print("Z-axis is up.")
-                module_picked = 1
+                module_picked = 13
 #                module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
 
             elif accel_z < -UP_DOWN_THRESHOLD:
                 sendData = "wearableIMU X direction:z-axis-down rgb:(0,50,100)"
                 print("Z-axis is down.")
 #                module_picked = random.randint(0, 35)
-                module_picked = 1
+                module_picked = 13
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
 
             # Detect impact based on acceleration magnitude
             accel_magnitude = calculate_magnitude(accel_x, accel_y, accel_z) - 1  # Subtract 1g for the stationary effect
@@ -300,6 +306,7 @@ while True:
                 print("Impact detected!")
                 for i in range(36):
                     server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                    time.sleep(1)
 
 
 
