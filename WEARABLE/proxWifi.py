@@ -189,8 +189,9 @@ while True:
             green_led.off()
             blue_led.off()
             continue
-        for i in range(36):
-            server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+
+        module_picked = random.randint(0, 35)
+        server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
 
     elif change_Mode_all == True:
         print("here2")

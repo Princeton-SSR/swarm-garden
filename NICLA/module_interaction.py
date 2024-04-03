@@ -632,25 +632,31 @@ def handle_expand(data):
     incoming_rgb = content.get("rgb", LEDStripColor)
 
     expand = content["expand"]
+    if expand == "short":
+        for i in range(n):
+            np[i] = incoming_rgb
+        np.write()
+        return
 
-#    module_picked = random.randint(0, 35)
-    module_picked = 2
+    elif expand == "medium":
+        for neighbor in neighbors_list:
+            for prev in prev_senders:
+                if neighbor[1] == prev:
+                    continue
+                elif neighbor[0] is not 'far':
+                    sendData = "stripSelf" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb
+                    print(sendData + " to module:" + neighbor[1])
+                    try:
+                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                    except OSError as e:
+                        print("Error sending UDP message:", e)
 
-    if module_ID == module_picked:
-        if expand == "short":
-            for i in range(n):
-                np[i] = incoming_rgb
-            np.write()
-
-        elif expand == "medium":
-            if len(prev_senders) == 0:
-                forward_strip_to_neighbors(neighbors, incoming_rgb, sender_id_string, prev_senders)
-        elif expand == "long":
-                forward_strip_to_neighbors(neighbors, incoming_rgb, sender_id_string, prev_senders)
-        else:
-            for i in range(n):
-                np[i] = (0, 0, 0)
-            np.write()
+    elif expand == "long":
+            forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id_string, prev_senders)
+    else:
+        for i in range(n):
+            np[i] = (0, 0, 0)
+        np.write()
 
 
 ##### Changing module state variables without propagation #####
