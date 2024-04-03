@@ -71,7 +71,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 0
+module_ID = 13
 
 info = get_module_info(module_ID)
 
@@ -837,126 +837,47 @@ def handle_pulse(data):
 
     return
 
-#def handle_imu(data):
+def handle_imu(data):
+    global LEDStripColor
+    global neighbors_list
+    global module_ID
 
-##    global LEDStripColor
-##    global neighbors_list
-##    global listeningOn
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    incoming_rgb = content["rgb"]
 
-##    message_type, sender_id_string, prev_senders, content = parse_message(data)
-##    incoming_rgb = content["rgb"]
-##    direction = content["direction"]
+    direction = content["direction"]
 
-##    if LEDStripColor == incoming_rgb:
-##        return
-##    # Remove the outer parentheses and split the string into a list of strings
-##    rgb_values_str = incoming_rgb[1:-1].split(',')
+    # Remove the outer parentheses and split the string into a list of strings
+    rgb_values_str = incoming_rgb[1:-1].split(',')
 
-##    # Convert each string to an integer
-##    rgb = tuple(int(value) for value in rgb_values_str)
+    # Convert each string to an integer
+    rgb = tuple(int(value) for value in rgb_values_str)
 
-##    # Define the fading speed (in seconds)
-##    FADE_SPEED = 0.01  # Adjust this value for the desired speed
+    # Define the fading speed (in seconds)
 
-##    for color in fade_color(LEDStripColor, incoming_rgb):
-##           # Draw gradient
-##        for i in range(n):
-##            np[i] = color
-##        # Update the strip.
-##        np.write()
-##        time.sleep(FADE_SPEED)
+    if (direction == "x-axis-up"):
+        LEDStripColor = incoming_rgb
+        forward_strip_to_neighbors(neighbors_list, incoming_rgb, sender_id_string, prev_senders)
+    elif (direction == "z-axis-up"):
+        LEDStripColor = incoming_rgb
+        forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "topright")
+        forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "bottomright")
+    elif (direction == "z-axis-down"):
+        LEDStripColor = incoming_rgb
+        forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "topleft")
+        forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "bottomleft")
+    elif (direction == "impact"):
+        for j in range(n):
+                np[j] = (100, 100, 100)  # 255 is the maximum brightness for red
+            np.write()
+        time.sleep(0.2)
+        for j in range(n):
+            np[j] = (0, 0, 0)
+        np.write()
 
-##    LEDStripColor = incoming_rgb
+        LEDStripColor = "(0,0,0)"
 
-##    forward_strip_to_neighbors_direction(neighbors_list, rgb, incoming_rgb, sender_id_string, prev_senders, direction)
-
-#    m = 0
-#    step = 0
-#    global LEDStripColor
-
-#    p = Pin('PG12', Pin.OUT_PP, Pin.PULL_NONE)
-#    np = neopixel.NeoPixel(p, 60)
-#    n = np.n
-
-#    message_type, sender_id_string, prev_senders, content = parse_message(data)
-#    incoming_rgb = content["rgb"]
-
-#    direction = content["direction"]
-
-#    if LEDStripColor == incoming_rgb:
-#        return
-#    # Remove the outer parentheses and split the string into a list of strings
-#    rgb_values_str = incoming_rgb[1:-1].split(',')
-
-#    # Convert each string to an integer
-#    rgb = tuple(int(value) for value in rgb_values_str)
-
-#    # Define the fading speed (in seconds)
-
-#    if (direction == "x-axis-up"):
-#        m = 3
-#        step = 2
-#        print("x-axis-up")
-#        greenLED.on()
-#        redLED.off()
-#        blueLED.off()
-#    elif (direction == "x-axis-down"):
-#        m = 3
-#        step = 6
-#        print("x-axis-down")
-#        greenLED.off()
-#        redLED.on(),
-#        blueLED.off()
-#    elif (direction == "y-axis-up"):
-#        m = 3
-#        step = 10
-#        print("y-axis-up")
-#        greenLED.off()
-#        redLED.off(),
-#        blueLED.on()
-#    elif (direction == "y-axis-down"):
-#        m = 3
-#        step = 14
-#        print("y-axis-down")
-#        greenLED.on()
-#        redLED.on(),
-#        blueLED.off()
-#    elif (direction == "z-axis-up"):
-#        m = 3
-#        step = 10
-#        print("z-axis-up")
-#        greenLED.off()
-#        redLED.off(),
-#        blueLED.on()
-#    elif (direction == "z-axis-down"):
-#        m = 3
-#        step = 14
-#        print("z-axis-down")
-#        greenLED.on()
-#        redLED.on(),
-#        blueLED.off()
-
-#    for _ in range(m):
-#        for i in range(0, 4 * 256, step):
-#            for j in range(n):
-#                if (i // 256) % 2 == 0:
-#                    val = i & 0xff
-#                else:
-#                    val = 255 - (i & 0xff)
-#                np[j] = (val, 0, 0)
-#            np.write()
-#        evts = poller.poll(0)  # Non-blocking
-#        if evts:
-#            break  # Exit if new data is available to handle it immediately
-
-#    for i in range(n):
-#        np[i] = (0, 0, 0)
-#    np.write()
-
-
-#    LEDStripColor = "(0, 0, 0)"
-
-#    return
+    return
 
 def handle_LED_self(data):
     global LEDColor
