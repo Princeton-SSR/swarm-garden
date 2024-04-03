@@ -868,8 +868,8 @@ def handle_imu(data):
         forward_strip_to_neighbors_direction(neighbors_list, incoming_rgb, sender_id_string, prev_senders, "bottomleft")
     elif (direction == "impact"):
         for j in range(n):
-                np[j] = (100, 100, 100)  # 255 is the maximum brightness for red
-            np.write()
+            np[j] = (100, 100, 100)
+        np.write()
         time.sleep(0.2)
         for j in range(n):
             np[j] = (0, 0, 0)
