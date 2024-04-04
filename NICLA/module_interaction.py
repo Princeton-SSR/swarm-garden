@@ -71,7 +71,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 34
+module_ID = 28
 
 info = get_module_info(module_ID)
 
@@ -123,7 +123,7 @@ while not wlan.isconnected():
     time.sleep_ms(1000)
 
 
-HOST = '192.168.2.81'
+HOST = '192.168.2.134'
 
 wlan.ifconfig((HOST, '255.255.255.0', '192.168.2.1', '192.168.2.1'))
 
@@ -242,27 +242,24 @@ def downwards():
                         data, addr = s.recvfrom(1024)
                         data = data.decode()
 
-                        last_command_time = time.time()
-
-                        if "LEDColorUpdate" in data:
-                            handle_LED_color_update(data)
-                        elif "LEDColorDirectionUpdate" in data:
-                            handle_LED_color_direction_update(data)
+                        if "neighborsUpdate" in data:
+                            handle_neighbors_update(data)
+                        elif "modeUpdate" in data:
+                            handle_mode_update(data)
+                            return
                         elif "bloomUpdate" in data:
                             handle_bloom_update(data)
-                            return False
                         elif "stripUpdate" in data:
                             handle_strip_update(data)
                         elif "stripDirectionUpdate" in data:
                             handle_strip_direction_update(data)
                         elif "bloomSelf" in data:
                             handle_bloom_self(data)
-                            return False
                         elif "stripSelf" in data:
                             handle_strip_self(data)
-                        elif "LEDSelf" in data:
-                            handle_LED_self(data)
+
             time.sleep(step_sleep)
+
         return True
 
 def upwards():
@@ -296,27 +293,24 @@ def upwards():
                         data, addr = s.recvfrom(1024)
                         data = data.decode()
 
-                        last_command_time = time.time()
-
-                        if "LEDColorUpdate" in data:
-                            handle_LED_color_update(data)
-                        elif "LEDColorDirectionUpdate" in data:
-                            handle_LED_color_direction_update(data)
+                        if "neighborsUpdate" in data:
+                            handle_neighbors_update(data)
+                        elif "modeUpdate" in data:
+                            handle_mode_update(data)
+                            return
                         elif "bloomUpdate" in data:
                             handle_bloom_update(data)
-                            return False
                         elif "stripUpdate" in data:
                             handle_strip_update(data)
                         elif "stripDirectionUpdate" in data:
                             handle_strip_direction_update(data)
                         elif "bloomSelf" in data:
                             handle_bloom_self(data)
-                            return False
                         elif "stripSelf" in data:
                             handle_strip_self(data)
-                        elif "LEDSelf" in data:
-                            handle_LED_self(data)
+
             time.sleep(step_sleep)
+
         return True
 
 def stop():
@@ -360,34 +354,30 @@ def forward_strip_to_neighbors(neighbors, incoming_rgb, sender_id_string, prev_s
 
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-
         for prev in prev_senders:
-            if neighbor[1] == prev:
-                continue
-            elif neighbor[0] is not 'far':
-                sendData = "stripUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb
-                print(sendData + " to module:" + neighbor[1])
-                try:
-                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                except OSError as e:
-                    print("Error sending UDP message:", e)
+            if neighbor[1] != prev:
+                if neighbor[0] is not 'far':
+                    sendData = "stripUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb
+                    print(sendData + " to module:" + neighbor[1])
+                    try:
+                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                    except OSError as e:
+                        print("Error sending UDP message:", e)
 
 def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, sender_id_string, prev_senders, direction):
     global module_ID
 
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-
         for prev in prev_senders:
-            if neighbor[1] == prev:
-                continue
-            elif neighbor[0] == direction:
-                print(neighbor)
-                sendData = "stripDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
-                try:
-                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                except OSError as e:
-                    print("Error sending UDP message:", e)
+            if neighbor[1] != prev:
+                if neighbor[0] == direction:
+                    print(neighbor)
+                    sendData = "stripDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
+                    try:
+                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                    except OSError as e:
+                        print("Error sending UDP message:", e)
 
 # takes in list of neighbors and bloom to propogate to neighbors
 def forward_bloom_to_neighbors(neighbors, bloom, sender_id_string, prev_senders):
@@ -395,49 +385,45 @@ def forward_bloom_to_neighbors(neighbors, bloom, sender_id_string, prev_senders)
 
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-
         for prev in prev_senders:
-            if neighbor[1] == prev:
-                continue
-            elif neighbor[0] is not 'far':
-                sendData = "bloomUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "bloom:" + bloom
-                try:
-                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                except OSError as e:
-                    print("Error sending UDP message:", e)
+            if neighbor[1] != prev:
+                if neighbor[0] is not 'far':
+                    sendData = "bloomUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "bloom:" + bloom
+                    try:
+                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                    except OSError as e:
+                        print("Error sending UDP message:", e)
 
 # takes in list of neighbors and color to propogate to neighbors
 def forward_LED_color_to_neighbors(neighbors, color, sender_id_string, prev_senders):
     global module_ID
+
     # for each neighbor, forward color message to their module_ID PORT
     for neighbor in neighbors:
-
         for prev in prev_senders:
-            if neighbor[1] == prev:
-                continue
-            elif neighbor[0] is not 'far':
-                sendData = "LEDColorUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color
-                try:
-                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                except OSError as e:
-                    print("Error sending UDP message:", e)
+            if neighbor[1] != prev:
+                if neighbor[0] is not 'far':
+                    sendData = "LEDColorUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color
+                    try:
+                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                    except OSError as e:
+                        print("Error sending UDP message:", e)
 
 # takes in list of neighbors and color to propogate to neighbors
 def forward_LED_color_to_neighbors_direction(neighbors, color, sender_id_string, prev_senders, direction):
     global module_ID
+
     # for each neighbor, forward color message to their module_ID PORT
     for neighbor in neighbors:
-
         for prev in prev_senders:
-            if neighbor[1] == prev:
-                continue
-            elif neighbor[0] == direction:
-                sendData = "LEDColorDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color + " " + "direction:" + direction
-                try:
-                    print(neighbor)
-                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                except OSError as e:
-                    print("Error sending UDP message:", e)
+            if neighbor[1] != prev:
+                if neighbor[0] == direction:
+                    sendData = "LEDColorDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color + " " + "direction:" + direction
+                    try:
+                        print(neighbor)
+                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                    except OSError as e:
+                        print("Error sending UDP message:", e)
 
 
 ########################### UPDATE HANDLING ##########################
@@ -680,15 +666,14 @@ def handle_expand(data):
 
         for neighbor in neighbors_list:
             for prev in prev_senders:
-                if neighbor[1] == prev:
-                    continue
-                elif neighbor[0] is not 'far':
-                    sendData = "stripSelf" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb
-                    print(sendData + " to module:" + neighbor[1])
-                    try:
-                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                    except OSError as e:
-                        print("Error sending UDP message:", e)
+                if neighbor[1] != prev:
+                    if neighbor[0] is not 'far':
+                        sendData = "stripSelf" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb
+                        print(sendData + " to module:" + neighbor[1])
+                        try:
+                            s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                        except OSError as e:
+                            print("Error sending UDP message:", e)
 
     elif expand == "long":
         print("long expand")
@@ -1055,95 +1040,101 @@ def proximity_color(s):
     global listeningOn
     global sheetColor
 
-
     # select random interaction result: bloom, unbloom, LED
-    selection = random.randint(1, 4)
-
-    # setting to color for now, blooming ones are weird
-#    selection = 1
-
-    listeningOn = True
+    selection = random.randint(1, 18)
 
     #lets us know we've entered new mode
     handle_strip_self("stripSelf x rgb:(100,100,100)")
     time.sleep(2)
 
+    allow_LED_update = True
+    sent = False
+
     while True:
 
-        # LED Coloring Mode
-        if selection == 1:
+        # LED Coloring Mode (1/3 chance)
+        if selection <= 6:
             proximity = tof.read()
-            if proximity < 800:
-                listeningOn = False
-
+            if proximity < 800 and not sent:
+                allow_LED_update = False
+                sent = True
                 if sheetColor == "orange":
-                    handle_strip_update("stripUpdate x rgb:(150,40,0)")
+                    handle_strip_self("stripSelf x rgb:(150,40,0)")
+                    LEDStripColor = '(150,40,0)'
+                    forward_strip_to_neighbors(neighbors_list, LEDStripColor, 'x', ['x'])
                 elif sheetColor == "yellow":
-                    handle_strip_update("stripUpdate x rgb:(150,105,0)")
+                    handle_strip_self("stripSelf x rgb:(150,105,0)")
+                    LEDStripColor = '(150,105,0)'
+                    forward_strip_to_neighbors(neighbors_list, LEDStripColor, 'x', ['x'])
                 elif sheetColor == "red":
-                    handle_strip_update("stripUpdate x rgb:(150,3,0)")
+                    handle_strip_self("stripSelf x rgb:(150,3,0)")
+                    LEDStripColor = '(150,3,0)'
+                    forward_strip_to_neighbors(neighbors_list, LEDStripColor, 'x', ['x'])
+            elif proximity < 800 and sent:
+                allow_LED_update = False
             else:
-                listeningOn = True
-#                handle_strip_self("stripSelf x rgb:(0,0,0)")
+                allow_LED_update = True
+                sent = False
 
-        # Bloom Mode
-        elif selection == 2:
-
+        # Bloom Mode (1/18 chance)
+        elif selection == 7:
             proximity = tof.read()
+            allow_LED_update = True
 
-            if proximity < 400:
+            if proximity < 200:
                 handle_bloom_update("bloomUpdate x bloom:bloom")
 
-        # Unbloom Mode
-        elif selection == 3:
 
+        # Unbloom Mode (1/18)
+        elif selection == 8:
             proximity = tof.read()
+            allow_LED_update = True
 
-            if proximity < 400:
+            if proximity < 200:
                 handle_bloom_update("bloomUpdate x bloom:unbloom")
 
+
         # Return to Idle Mode
-        elif selection == 4:
+        elif selection > 8:
             mode = "idle"
             return
 
         evts = poller.poll(10)
 
         ##################### MESSAGE + STATE MANAGEMENT ######################
-        if listeningOn:
-            for sock, evt in evts:
-                if evt and select.POLLIN:
-                    if sock == s:
-                        data, addr = s.recvfrom(1024)
-                        data = data.decode()
+        for sock, evt in evts:
+            if evt and select.POLLIN:
+                if sock == s:
+                    data, addr = s.recvfrom(1024)
+                    data = data.decode()
 
-                        last_command_time = time.time()
+                    last_command_time = time.time()
 
-                        if "neighborsUpdate" in data:
-                            handle_neighbors_update(data)
-                        elif "modeUpdate" in data:
-                            handle_mode_update(data)
-                            return
-                        elif "LEDColorUpdate" in data:
-                            handle_LED_color_update(data)
-                        elif "LEDColorDirectionUpdate" in data:
-                            handle_LED_color_direction_update(data)
-                        elif "bloomUpdate" in data:
-                            handle_bloom_update(data)
-                        elif "stripUpdate" in data:
-                            handle_strip_update(data)
-                        elif "stripDirectionUpdate" in data:
-                            handle_strip_direction_update(data)
-                        elif "bloomSelf" in data:
-                            handle_bloom_self(data)
-                        elif "stripSelf" in data:
-                            handle_strip_self(data)
-                        elif "LEDSelf" in data:
-                            handle_LED_self(data)
+                    if "neighborsUpdate" in data:
+                        handle_neighbors_update(data)
+                    elif "modeUpdate" in data:
+                        handle_mode_update(data)
+                        return
+                    elif "LEDColorUpdate" in data:
+                        handle_LED_color_update(data)
+                    elif "LEDColorDirectionUpdate" in data:
+                        handle_LED_color_direction_update(data)
+                    elif "bloomUpdate" in data:
+                        handle_bloom_update(data)
+                    elif "stripUpdate" in data and allow_LED_update:
+                        handle_strip_update(data)
+                    elif "stripDirectionUpdate" in data and allow_LED_update:
+                        handle_strip_direction_update(data)
+                    elif "bloomSelf" in data:
+                        handle_bloom_self(data)
+                    elif "stripSelf" in data:
+                        handle_strip_self(data)
+                    elif "LEDSelf" in data:
+                        handle_LED_self(data)
 
 ##################@### WEBSERVER SOCKET + STREAMING / LISTENING ################
 
-WEBPORT = 8080 + module_ID
+WEBPORT = 65000 + module_ID
 
 # Create server socket
 webserver = socket(AF_INET, SOCK_STREAM)
@@ -1166,6 +1157,7 @@ def MPEG_streaming(s, webserver):
     global module_ID
     global mode
     global last_command_time
+    global LEDStripColor
 
     #lets us know we've entered new mode
     handle_strip_self("stripSelf x rgb:(100,100,100)")

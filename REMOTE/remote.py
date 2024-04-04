@@ -14,6 +14,6 @@ for i in range(36):
 
 #     sendData = input()
 #     for _ in range(3):
-#         server.sendto(sendData.encode(), ('255.255.255.255', 50000))
+#         server.sendto(sendData.encode(), ('255.255.255.255', 50016))
 
 
