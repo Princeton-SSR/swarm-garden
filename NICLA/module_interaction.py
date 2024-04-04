@@ -71,7 +71,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 28
+module_ID = 0
 
 info = get_module_info(module_ID)
 
@@ -352,32 +352,31 @@ def parse_message(message):
 def forward_strip_to_neighbors(neighbors, incoming_rgb, sender_id_string, prev_senders):
     global module_ID
 
+    print(prev_senders)
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-        for prev in prev_senders:
-            if neighbor[1] != prev:
-                if neighbor[0] is not 'far':
-                    sendData = "stripUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb
-                    print(sendData + " to module:" + neighbor[1])
-                    try:
-                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                    except OSError as e:
-                        print("Error sending UDP message:", e)
+        if neighbor[1] not in prev_senders:
+            if neighbor[0] is not 'far':
+                sendData = "stripUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb
+                print(sendData + " to module:" + neighbor[1])
+                try:
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
 
 def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, sender_id_string, prev_senders, direction):
     global module_ID
 
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-        for prev in prev_senders:
-            if neighbor[1] != prev:
-                if neighbor[0] == direction:
-                    print(neighbor)
-                    sendData = "stripDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
-                    try:
-                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                    except OSError as e:
-                        print("Error sending UDP message:", e)
+        if neighbor[1] not in prev_senders:
+            if neighbor[0] == direction:
+                sendData = "stripDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
+                print(sendData + " to module:" + neighbor[1])
+                try:
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
 
 # takes in list of neighbors and bloom to propogate to neighbors
 def forward_bloom_to_neighbors(neighbors, bloom, sender_id_string, prev_senders):
@@ -385,14 +384,14 @@ def forward_bloom_to_neighbors(neighbors, bloom, sender_id_string, prev_senders)
 
     # for each neighbor, forward bloom message to their module_ID PORT
     for neighbor in neighbors:
-        for prev in prev_senders:
-            if neighbor[1] != prev:
-                if neighbor[0] is not 'far':
-                    sendData = "bloomUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "bloom:" + bloom
-                    try:
-                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                    except OSError as e:
-                        print("Error sending UDP message:", e)
+        if neighbor[1] not in prev_senders:
+            if neighbor[0] is not 'far':
+                sendData = "bloomUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "bloom:" + bloom
+                print(sendData + " to module:" + neighbor[1])
+                try:
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
 
 # takes in list of neighbors and color to propogate to neighbors
 def forward_LED_color_to_neighbors(neighbors, color, sender_id_string, prev_senders):
@@ -400,14 +399,14 @@ def forward_LED_color_to_neighbors(neighbors, color, sender_id_string, prev_send
 
     # for each neighbor, forward color message to their module_ID PORT
     for neighbor in neighbors:
-        for prev in prev_senders:
-            if neighbor[1] != prev:
-                if neighbor[0] is not 'far':
-                    sendData = "LEDColorUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color
-                    try:
-                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                    except OSError as e:
-                        print("Error sending UDP message:", e)
+        if neighbor[1] not in prev_senders:
+            if neighbor[0] is not 'far':
+                sendData = "LEDColorUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color
+                print(sendData + " to module:" + neighbor[1])
+                try:
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
 
 # takes in list of neighbors and color to propogate to neighbors
 def forward_LED_color_to_neighbors_direction(neighbors, color, sender_id_string, prev_senders, direction):
@@ -415,15 +414,15 @@ def forward_LED_color_to_neighbors_direction(neighbors, color, sender_id_string,
 
     # for each neighbor, forward color message to their module_ID PORT
     for neighbor in neighbors:
-        for prev in prev_senders:
-            if neighbor[1] != prev:
-                if neighbor[0] == direction:
-                    sendData = "LEDColorDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color + " " + "direction:" + direction
-                    try:
-                        print(neighbor)
-                        s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
-                    except OSError as e:
-                        print("Error sending UDP message:", e)
+        if neighbor[1] not in prev_senders:
+             if neighbor[0] == direction:
+                sendData = "LEDColorDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color + " " + "direction:" + direction
+                print(sendData + " to module:" + neighbor[1])
+                try:
+                    print(neighbor)
+                    s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
+                except OSError as e:
+                    print("Error sending UDP message:", e)
 
 
 ########################### UPDATE HANDLING ##########################
@@ -551,6 +550,8 @@ def handle_strip_update(data):
     global neighbors_list
     global listeningOn
 
+    print(data)
+    # stripUpdate 1,12,13 rgb:(100,0,100)
     message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
