@@ -15,23 +15,46 @@ server.bind(("", 20000))
 
 '''
 grid = [
-    [3, 8, 2],
-    [11, 6, 7],
-    [13, 10, 5]
+    [24, 17, 9],
+    [2, 10, 11],
+    [31, 0, 4]
 ]
 
-for column in grid:
-    for item in column:
-        for _ in range(3):
-            sendData = "bloomSelf X bloom:bloom"
-            server.sendto(sendData.encode(), ('255.255.255.255', 50000 + item))
-            time.sleep(0.75)
-    time.sleep(0.25)
 
 for column in grid:
     for item in column:
         for _ in range(3):
-            sendData = "stripSelf X rgb:(100,0,100)"
-            server.sendto(sendData.encode(), ('255.255.255.255', 50000 + item))
-            time.sleep(0.75)
-    time.sleep(0.25)
+            bloom = "bloomSelf X bloom:unbloom"
+            server.sendto(bloom.encode(), ('255.255.255.255', 50000 + item))
+            strip = "stripSelf X rgb:(0,0,0)"
+            server.sendto(strip.encode(), ('255.255.255.255', 50000 + item))
+
+time.sleep(20)
+
+for column in grid:
+    for item in column:
+        for _ in range(3):
+            strip = "stripSelf X rgb:(150,60,0)"
+            server.sendto(strip.encode(), ('255.255.255.255', 50000 + item))
+            time.sleep(0.5)
+            bloom = "bloomSelf X bloom:bloom"
+            server.sendto(bloom.encode(), ('255.255.255.255', 50000 + item))
+            time.sleep(0.5)
+    time.sleep(0.5)
+
+time.sleep(3)
+
+# UNDER HERE
+for column in reversed(grid):
+    for item in reversed(column):
+        for _ in range(3):
+            strip = "stripSelf X rgb:(0,100,100)"
+            server.sendto(strip.encode(), ('255.255.255.255', 50000 + item))
+            time.sleep(0.5)
+            bloom = "bloomSelf X bloom:unbloom"
+            server.sendto(bloom.encode(), ('255.255.255.255', 50000 + item))
+            time.sleep(0.5)
+    time.sleep(0.5)
+
+
+
