@@ -313,6 +313,59 @@ def upwards():
 
         return True
 
+def upwards_listen_off():
+        for i in range(step_count):
+            if i%4==0:
+                mcp.pin(0, mode=0, value=0)
+                mcp.pin(1, mode=0, value=0)
+                mcp.pin(2, mode=0, value=0)
+                mcp.pin(3, mode=0, value=1)
+            elif i%4==1:
+                mcp.pin(0, mode=0, value=0)
+                mcp.pin(1, mode=0, value=1)
+                mcp.pin(2, mode=0, value=0)
+                mcp.pin(3, mode=0, value=0)
+            elif i%4==2:
+                mcp.pin(0, mode=0, value=0)
+                mcp.pin(1, mode=0, value=0)
+                mcp.pin(2, mode=0, value=1)
+                mcp.pin(3, mode=0, value=0)
+            elif i%4==3:
+                mcp.pin(0, mode=0, value=1)
+                mcp.pin(1, mode=0, value=0)
+                mcp.pin(2, mode=0, value=0)
+                mcp.pin(3, mode=0, value=0)
+
+            time.sleep(step_sleep)
+
+def downwards_listen_off():
+        for i in range(step_count):
+            if i%4==0:
+                mcp.pin(0, mode=0, value=1)
+                mcp.pin(1, mode=0, value=0)
+                mcp.pin(2, mode=0, value=0)
+                mcp.pin(3, mode=0, value=0)
+
+            elif i%4==1:
+                mcp.pin(0, mode=0, value=0)
+                mcp.pin(1, mode=0, value=0)
+                mcp.pin(2, mode=0, value=1)
+                mcp.pin(3, mode=0, value=0)
+
+            elif i%4==2:
+                mcp.pin(0, mode=0, value=0)
+                mcp.pin(1, mode=0, value=1)
+                mcp.pin(2, mode=0, value=0)
+                mcp.pin(3, mode=0, value=0)
+            elif i%4==3:
+                mcp.pin(0, mode=0, value=0)
+                mcp.pin(1, mode=0, value=0)
+                mcp.pin(2, mode=0, value=0)
+                mcp.pin(3, mode=0, value=1)
+
+            time.sleep(step_sleep)
+
+
 def stop():
     mcp.pin(0, mode=0, value=0)
     mcp.pin(1, mode=0, value=0)
@@ -702,12 +755,7 @@ def handle_bloom_self(data):
         while dist_from_stop < unbloom_thresh:
             listeningOn = False
 
-            check = upwards()
-
-            if check == False:
-                listeningOn = True
-                stop()
-                return
+            upwards_listen_off()
 
             dist_from_stop = tof2.read()
 
@@ -715,12 +763,7 @@ def handle_bloom_self(data):
         while dist_from_stop > bloom_thresh:
             listeningOn = False
 
-            check = downwards()
-
-            if check == False:
-                listeningOn = True
-                stop()
-                return
+            downwards_listen_off()
 
             dist_from_stop = tof2.read()
 
