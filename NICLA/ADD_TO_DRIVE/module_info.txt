@@ -24,10 +24,10 @@ module_ID:22,unbloom_thresh:103,bloom_thresh:84,sheetColor:yellow
 module_ID:23,unbloom_thresh:103,bloom_thresh:84,sheetColor:orange
 module_ID:24,unbloom_thresh:79,bloom_thresh:63,sheetColor:yellow
 module_ID:25,unbloom_thresh:65,bloom_thresh:49,sheetColor:red
-module_ID:26,unbloom_thresh:0,bloom_thresh:0,sheetColor:red
+module_ID:26,unbloom_thresh:74,bloom_thresh:55,sheetColor:red
 module_ID:27,unbloom_thresh:52,bloom_thresh:42,sheetColor:yellow
 module_ID:28,unbloom_thresh:90,bloom_thresh:75,sheetColor:orange
-module_ID:29,unbloom_thresh:0,bloom_thresh:0,sheetColor:red
+module_ID:29,unbloom_thresh:90,bloom_thresh:73,sheetColor:red
 module_ID:30,unbloom_thresh:56,bloom_thresh:44,sheetColor:red
 module_ID:31,unbloom_thresh:94,bloom_thresh:75,sheetColor:red
 module_ID:32,unbloom_thresh:84,bloom_thresh:63,sheetColor:red

@@ -71,7 +71,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 8
+module_ID = 26
 
 info = get_module_info(module_ID)
 
@@ -1142,6 +1142,57 @@ def proximity_color(s):
         elif selection > 8:
             mode = "idle"
             return
+
+        evts = poller.poll(10)
+
+        ##################### MESSAGE + STATE MANAGEMENT ######################
+        for sock, evt in evts:
+            if evt and select.POLLIN:
+                if sock == s:
+                    data, addr = s.recvfrom(1024)
+                    data = data.decode()
+
+                    last_command_time = time.time()
+
+                    if "neighborsUpdate" in data:
+                        handle_neighbors_update(data)
+                    elif "modeUpdate" in data:
+                        handle_mode_update(data)
+                        return
+                    elif "LEDColorUpdate" in data:
+                        handle_LED_color_update(data)
+                    elif "LEDColorDirectionUpdate" in data:
+                        handle_LED_color_direction_update(data)
+                    elif "bloomUpdate" in data:
+                        handle_bloom_update(data)
+                    elif "stripUpdate" in data and allow_LED_update:
+                        handle_strip_update(data)
+                    elif "stripDirectionUpdate" in data and allow_LED_update:
+                        handle_strip_direction_update(data)
+                    elif "bloomSelf" in data:
+                        handle_bloom_self(data)
+                    elif "stripSelf" in data:
+                        handle_strip_self(data)
+                    elif "LEDSelf" in data:
+                        handle_LED_self(data)
+
+
+######### LIGHT PAINTING MODE #########
+def light_painting(s):
+    global neighbors_list
+    global LEDColor
+    global mode
+    global last_command_time
+    global listeningOn
+    global sheetColor
+
+
+    while True:
+
+
+        proximity = tof.read()
+
+
 
         evts = poller.poll(10)
 
