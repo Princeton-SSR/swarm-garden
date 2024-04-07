@@ -96,7 +96,7 @@ while True:
         img.draw_rectangle(tag.rect(), color=(255, 0, 0))
         img.draw_cross(tag.cx(), tag.cy(), color=(0, 255, 0))
 
-        neighbors = calculate_neighbors(tag, detected_modules, num_neighbors=7)
+        neighbors = calculate_neighbors(tag, detected_modules, num_neighbors=5)
 
         print_args = (
             tag.id(),
