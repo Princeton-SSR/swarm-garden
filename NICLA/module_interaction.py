@@ -89,7 +89,7 @@ print("module_ID:", module_ID, "unbloom_thresh:", unbloom_thresh, "bloom_thresh:
 neighbors_list = []
 
 # current mode
-mode = "idle"
+mode = "lightPainting"
 
 # on board LED color (starts as blue (3) after wifi connection)
 LEDColor = "3"
@@ -106,7 +106,13 @@ webhost_unique = str(200 + module_ID)
 # used for checking when the last command was recieved
 last_command_time = time.time()
 
+# used for turning off and on listening
 listeningOn = True
+
+# global paint vars used for light painting mode
+current_paint = '(100,0,0)'
+paint_palette = ['(100,0,0)','(100,0,100)','(0,100,100)','(100,100,0)', '(50,100,0)']
+iteration = 0
 
 ##########################################################################
 
@@ -496,6 +502,8 @@ def handle_mode_update(data):
         mode = "wearable"
     elif "proximityColor" in data:
         mode = "proximityColor"
+    elif "lightPainting" in data:
+        mode = "lightPainting"
     else:
         mode = "idle"
 
@@ -505,6 +513,10 @@ def handle_LED_color_update(data):
 
     message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_color = content["color"]
+
+    for prev in prev_senders:
+        if str(module_ID) == prev:
+            return
 
     redLED.off()
     greenLED.off()
@@ -522,6 +534,10 @@ def handle_bloom_update(data):
 
     message_type, sender_id_string, prev_senders, content = parse_message(data)
     bloom = content["bloom"]
+
+    for prev in prev_senders:
+        if str(module_ID) == prev:
+            return
 
     dist_from_stop = tof2.read()
 
@@ -608,10 +624,6 @@ def handle_strip_update(data):
     message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
-    # if i'm already at this color don't do anything
-#    if LEDStripColor == incoming_rgb:
-#        return
-
     # if i'm already a previous sender of this info don't do anything
     for prev in prev_senders:
         if str(module_ID) == prev:
@@ -647,8 +659,9 @@ def handle_strip_direction_update(data):
     incoming_rgb = content["rgb"]
     direction = content["direction"]
 
-#    if LEDStripColor == incoming_rgb:
-#        return
+    for prev in prev_senders:
+        if str(module_ID) == prev:
+            return
 
     # Remove the outer parentheses and split the string into a list of strings
     rgb_values_str = incoming_rgb[1:-1].split(',')
@@ -678,6 +691,10 @@ def handle_LED_color_direction_update(data):
     message_type, sender_id_string, prev_senders, content = parse_message(data)
     incoming_color = content["color"]
     direction = content["direction"]
+
+    for prev in prev_senders:
+        if str(module_ID) == prev:
+            return
 
     redLED.off()
     greenLED.off()
@@ -800,6 +817,31 @@ def handle_strip_self(data):
         time.sleep(FADE_SPEED)
 
     LEDStripColor = incoming_rgb
+
+    return
+
+def handle_strip_paint(data):
+    global LEDStripColor
+
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    incoming_rgb = content["rgb"]
+
+    # Remove the outer parentheses and split the string into a list of strings
+    rgb_values_str = incoming_rgb[1:-1].split(',')
+
+    # Convert each string to an integer
+    rgb = tuple(int(value) for value in rgb_values_str)
+
+    # Define the fading speed (in seconds)
+    FADE_SPEED = 0.01  # Adjust this value for the desired speed
+
+    for color in fade_color(LEDStripColor, incoming_rgb):
+           # Draw gradient
+        for i in range(n):
+            np[i] = color
+        # Update the strip.
+        np.write()
+        time.sleep(FADE_SPEED)
 
     return
 
@@ -935,6 +977,66 @@ def handle_LED_self(data):
     LEDColor = incoming_color
 
     return
+
+
+prev_orientation = "none"
+
+def handle_paint(data):
+    global current_paint
+    global paint_palette
+    global iteration
+    global LEDStripColor
+    global prev_orientation
+
+    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    direction = content["direction"]
+
+    if (direction == "x-axis-up"):
+        print("x up")
+        prev_orientation = "x-axis-up"
+        return
+
+    elif (direction == "y-axis-down"):
+        print("y axis")
+        prev_orientation = "y-axis-down"
+        return
+
+    elif (direction == "y-axis-up"):
+        print("y up")
+
+        if prev_orientation == "y-axis-up":
+            return
+
+        prev_orientation = "y-axis-up"
+        selected_color = paint_palette[iteration]
+        print(selected_color, LEDStripColor)
+
+        handle_strip_paint("stripSelf X rgb:" + selected_color)
+        time.sleep(1.25)
+        handle_strip_self("stripSelf X rgb:" + LEDStripColor)
+
+        current_paint = selected_color
+
+        iteration += 1
+
+        if iteration == len(paint_palette):
+            iteration = 0
+
+    elif (direction == "z-axis-up"):
+        if prev_orientation == "z-axis-up":
+            return
+
+        if LEDStripColor == "(0,0,0)":
+            print("hi")
+            handle_bloom_self("selfBloom X bloom:unbloom")
+
+        prev_orientation = "z-axis-up"
+        return
+
+    elif (direction == "z-axis-down"):
+        print("z-down")
+        prev_orientation = "z-axis-down"
+        return
 
 def return_to_base_conditions():
     global LEDStripColor
@@ -1072,8 +1174,6 @@ def wearable(s):
                             handle_expand(data)
                         elif "wearableIMU" in data:
                             handle_imu(data)
-                        elif "wearablePaint" in data:
-                            handle_paint(data)
 
 
 ########## PROXIMITY COLOR MODE #############
@@ -1116,6 +1216,11 @@ def proximity_color(s):
                     handle_strip_self("stripSelf x rgb:(150,3,0)")
                     LEDStripColor = '(150,3,0)'
                     forward_strip_to_neighbors(neighbors_list, LEDStripColor, 'x', ['x'])
+
+                listeningOn = False
+                time.sleep(5)
+                listeningOn = True
+
             elif proximity < 800 and sent:
                 allow_LED_update = False
             else:
@@ -1187,14 +1292,33 @@ def light_painting(s):
     global last_command_time
     global listeningOn
     global sheetColor
+    global current_paint
+    global paint_palette
+    global iteration
 
+#    lets us know we've entered new mode
+#    handle_strip_self("stripSelf x rgb:(0,0,0)")
+#    time.sleep(2)
 
+#    handle_bloom_self("bloomSelf x bloom:bloom")
+    touched = False
     while True:
-
 
         proximity = tof.read()
 
+        if proximity < 50 and not touched:
+            print(touched)
+            handle_strip_self("stripSelf x rgb:" + current_paint)
+            LEDStripColor = current_paint
+            touched = True
+            time.sleep(0.5)
 
+        elif proximity < 50 and touched:
+            print(touched)
+            handle_strip_self("stripSelf x rgb:(0,0,0)")
+            LEDStripColor = '(0,0,0)'
+            touched = False
+            time.sleep(0.5)
 
         evts = poller.poll(10)
 
@@ -1228,6 +1352,9 @@ def light_painting(s):
                         handle_strip_self(data)
                     elif "LEDSelf" in data:
                         handle_LED_self(data)
+                    elif "wearablePaint" in data:
+                        handle_paint(data)
+
 
 ##################@### WEBSERVER SOCKET + STREAMING / LISTENING ################
 
@@ -1336,5 +1463,7 @@ while(True):
         wearable(s)
     elif mode == "proximityColor":
         proximity_color(s)
+    elif mode == "lightPainting":
+        light_painting(s)
     else:
         idle_listening(s)
