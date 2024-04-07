@@ -91,6 +91,7 @@ last_sent = "None"
 
 change_Mode_prox = False
 change_Mode_all = False
+change_Mode_participant = False
 
 
 while True:
@@ -104,7 +105,7 @@ while True:
             while (tof.read() < 50):
                 elapsed = pyb.elapsed_millis(start)
                 print(pyb.elapsed_millis(start))
-                if elapsed <= 8000:
+                if elapsed <= 10000:
                     if elapsed < 500:
                         sendData = "wearablePulse X pulse:short rgb:(100,0,100)"
                         print(sendData)
@@ -131,13 +132,21 @@ while True:
                         red_led.off()
                         blue_led.on()
                         green_led.on()
-                    elif (elapsed >= 7000):
+                    elif (8000 > elapsed >= 7000):
                         change_Mode_all = True
                         sendData = "change to IMU"
                         print(sendData)
                         red_led.off()
                         blue_led.off()
                         green_led.on()
+                    elif (elapsed >= 8000):
+                        change_Mode_participant = True
+                        sendData = "change to participant mode"
+                        print(sendData)
+                        red_led.on()
+                        blue_led.on()
+                        green_led.on()
+
                 else:
                     break
                 pyb.delay(100)
@@ -161,7 +170,7 @@ while True:
                 elapsed = pyb.elapsed_millis(start)
                 print(pyb.elapsed_millis(start))
                 module_picked = random.randint(0, 35)
-                if elapsed <= 8000:
+                if elapsed <= 10000:
                     if elapsed < 500:
                         sendData = "wearableExpand X expand:short rgb:(100,0,100)"
                         print(sendData)
@@ -186,11 +195,19 @@ while True:
                         red_led.off()
                         blue_led.on()
                         green_led.on()
-                    elif (elapsed >= 7000):
+                    elif (8000 > elapsed >= 7000):
                         change_Mode_all = True
-                        sendData = ""
+                        sendData = "change to IMU"
+                        print(sendData)
                         red_led.off()
                         blue_led.off()
+                        green_led.on()
+                    elif (elapsed >= 8000):
+                        change_Mode_participant = True
+                        sendData = "change to participant mode"
+                        print(sendData)
+                        red_led.on()
+                        blue_led.on()
                         green_led.on()
                 else:
                     break
@@ -202,17 +219,13 @@ while True:
             continue
         server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
 
-    elif change_Mode_all == True:
-        print("here2")
+    elif change_Mode_participant == True:
+        print("here3")
         lsm = LSM6DSOX(SPI(5), cs=Pin("PF6", Pin.OUT_PP, Pin.PULL_UP))
 
         # Thresholds
         UP_DOWN_THRESHOLD = 0.8  # Threshold to detect up or down orientation
         IMPACT_THRESHOLD = 1.2  # Acceleration threshold to detect an impact
-
-#        def calculate_magnitude(x, y, z):
-#            """Calculate the magnitude of the acceleration vector."""
-#            return math.sqrt(x**2 + y**2 + z**2)
 
         start = pyb.millis()
         while True:
@@ -221,10 +234,120 @@ while True:
                 current_time = pyb.millis()
                 elapsed = current_time - start
                 print(elapsed)
-                if (elapsed >= 7000):
+                if (10000 > elapsed >= 9000):
                     print(elapsed)
                     change_Mode_all = False
                     change_Mode_prox = False
+                    break
+                if (11000 > elapsed >= 10000):
+                    print(elapsed)
+                    change_Mode_all = False
+                    change_Mode_prox = True
+                    break
+                if (elapsed >= 12000):
+                    print(elapsed)
+                    change_Mode_all = False
+                    change_Mode_participant = True
+                    break
+                break
+            if change_Mode_all == False:
+                break
+            sendData = ""
+            # Read accelerometer data
+            accel_x, accel_y, accel_z = lsm.accel()
+
+            # Detect orientation for x-axis
+            if accel_x > UP_DOWN_THRESHOLD:
+                sendData = "wearablePaint X selection:x-axis-up rgb:(100,0,50)"
+                print("X-axis is up.")
+                module_picked = random.randint(0, 35)
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
+
+            elif accel_x < -UP_DOWN_THRESHOLD:
+                sendData = "wearablePaint X selection:x-axis-down rgb:(100,100,0)"
+                print("X-axis is down.")
+                module_picked = random.randint(0, 35)
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
+
+
+            # Detect orientation for y-axis
+            if accel_y > UP_DOWN_THRESHOLD:
+                sendData = "wearablePaint X selection:y-axis-up rgb:(0,0,0)"
+                print("Y-axis is up.")
+                for i in range(36):
+                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                time.sleep(1)
+
+            elif accel_y < -UP_DOWN_THRESHOLD:
+                sendData = "wearablePaint X selection:y-axis-down rgb:(50,100,0)"
+                print("Y-axis is down.")
+                for i in range(36):
+                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
+                time.sleep(1)
+
+
+            # Detect orientation for z-axis
+            if accel_z > UP_DOWN_THRESHOLD:
+                sendData = "wearablePaint X selection:z-axis-up rgb:(100,50,50)"
+                print("Z-axis is up.")
+                module_picked = random.randint(0, 35)
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
+
+            elif accel_z < -UP_DOWN_THRESHOLD:
+                sendData = "wearablePaint X selection:z-axis-down rgb:(0,50,100)"
+                print("Z-axis is down.")
+                module_picked = random.randint(0, 35)
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
+                time.sleep(1)
+
+
+    elif change_Mode_all == True:
+        print("here2")
+        lsm = LSM6DSOX(SPI(5), cs=Pin("PF6", Pin.OUT_PP, Pin.PULL_UP))
+
+        # Thresholds
+        UP_DOWN_THRESHOLD = 0.8  # Threshold to detect up or down orientation
+        IMPACT_THRESHOLD = 1.2  # Acceleration threshold to detect an impact
+
+        start = pyb.millis()
+        while True:
+            green_led.on()
+            while (tof.read() < 50):
+                current_time = pyb.millis()
+                elapsed = current_time - start
+                print(elapsed)
+                if (8000 > elapsed >= 7000):
+                    print(elapsed)
+                    change_Mode_all = False
+                    change_Mode_prox = False
+                    break
+                if (9000 > elapsed >= 8000):
+                    print(elapsed)
+                    change_Mode_all = False
+                    change_Mode_prox = True
+                    break
+                if (elapsed >= 9000):
+                    print(elapsed)
+                    change_Mode_all = False
+                    change_Mode_participant = True
                     break
                 break
             if change_Mode_all == False:
@@ -292,14 +415,6 @@ while True:
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 time.sleep(1)
 
-            # Detect impact based on acceleration magnitude
-#            accel_magnitude = calculate_magnitude(accel_x, accel_y, accel_z) - 1  # Subtract 1g for the stationary effect
-#            if accel_magnitude > IMPACT_THRESHOLD:
-#                sendData = "wearableIMU X direction:impact rgb:(100,0,0)"
-#                print("Impact detected!")
-#                for i in range(36):
-#                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
-#                    time.sleep(1)
 
 
 

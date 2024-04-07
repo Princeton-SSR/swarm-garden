@@ -71,7 +71,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 10
+module_ID = 27
 
 info = get_module_info(module_ID)
 
@@ -1072,6 +1072,8 @@ def wearable(s):
                             handle_expand(data)
                         elif "wearableIMU" in data:
                             handle_imu(data)
+                        elif "wearablePaint" in data:
+                            handle_paint(data)
 
 
 ########## PROXIMITY COLOR MODE #############
