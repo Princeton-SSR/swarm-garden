@@ -9,8 +9,9 @@ import random
 
 # Each row is a column from bottom to top i.e grid[0][0] is the bottom left most module
 grid = [
-    [14, 12, 8],
-    [30,22,20]
+    [18,30,20],
+    [26,22,23],
+    [7,8,25]
 ]
 
 ### UNBLOOM ALL TO FLAT ####
