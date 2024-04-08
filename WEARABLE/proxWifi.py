@@ -258,8 +258,8 @@ while True:
 
             # Detect orientation for x-axis
             if accel_x > UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X selection:x-axis-up rgb:(100,0,50)"
-                print("X-axis is up.")
+                sendData = "wearablePaint X direction:x-axis-up rgb:(100,0,50)"
+                print(sendData)
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -267,8 +267,8 @@ while True:
                 time.sleep(1)
 
             elif accel_x < -UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X selection:x-axis-down rgb:(100,100,0)"
-                print("X-axis is down.")
+                sendData = "wearablePaint X direction:x-axis-down rgb:(100,100,0)"
+                print(sendData)
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -278,31 +278,24 @@ while True:
 
             # Detect orientation for y-axis
             if accel_y > UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X selection:y-axis-up rgb:(0,0,0)"
-                print("Y-axis is up.")
+                sendData = "wearablePaint X direction:y-axis-up rgb:(0,0,0)"
+                print(sendData)
                 for i in range(36):
-                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
-                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
-                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
-                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
-                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
                     server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
                 time.sleep(1)
 
             elif accel_y < -UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X selection:y-axis-down rgb:(50,100,0)"
-                print("Y-axis is down.")
+                sendData = "wearablePaint X direction:y-axis-down rgb:(50,100,0)"
+                print(sendData)
                 for i in range(36):
-                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
-                    server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
                     server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
                 time.sleep(1)
 
 
             # Detect orientation for z-axis
             if accel_z > UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X selection:z-axis-up rgb:(100,50,50)"
-                print("Z-axis is up.")
+                sendData = "wearablePaint X direction:z-axis-up rgb:(100,50,50)"
+                print(sendData)
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -310,8 +303,8 @@ while True:
                 time.sleep(1)
 
             elif accel_z < -UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X selection:z-axis-down rgb:(0,50,100)"
-                print("Z-axis is down.")
+                sendData = "wearablePaint X direction:z-axis-down rgb:(0,50,100)"
+                print(sendData)
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
