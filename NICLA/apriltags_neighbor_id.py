@@ -106,7 +106,7 @@ while True:
             neighbors
         )
 
-        sendData = f"neighborsUpdate {tag.id()} {neighbors_string(tag.cx(), tag.cy(), neighbors)}"
+        sendData = f"neighborsUpdate {tag.id()} X {neighbors_string(tag.cx(), tag.cy(), neighbors)}"
         print(sendData)
 
 #        if tag.id() == 1:
