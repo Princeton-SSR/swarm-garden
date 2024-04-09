@@ -72,7 +72,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 10
+module_ID = 29
 
 info = get_module_info(module_ID)
 
@@ -513,6 +513,8 @@ def handle_mode_update(data):
         mode = "proximityColor"
     elif "lightPainting" in data:
         mode = "lightPainting"
+    elif "proximityBloom" in data:
+        mode = "proximityBloom"
     elif "proximityTransient" in data:
         mode = "proximityTransient"
     else:
@@ -761,6 +763,7 @@ def handle_expand(data):
     global LEDStripColor
     global neighbors_list
     global module_ID
+    global curr_msg_id
 
     print("handle_expand")
 
@@ -786,7 +789,7 @@ def handle_expand(data):
         print("medium expand")
 
         handle_strip_self("stripSelf X X rgb:" + incoming_rgb)
-
+        curr_msg_id = generate_random_id(6)
         for neighbor in neighbors_list:
             for prev in prev_senders:
                 if neighbor[1] != prev:
@@ -963,11 +966,12 @@ def handle_imu(data):
     global LEDStripColor
     global neighbors_list
     global module_ID
+    global curr_msg_id
 
     print("handle_imu")
 
     message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
-
+    curr_msg_id = incoming_msg_id
     incoming_rgb = content["rgb"]
 
     direction = content["direction"]
@@ -1040,6 +1044,8 @@ def handle_paint(data):
     global iteration
     global LEDStripColor
     global prev_orientation
+    global curr_msg_id
+
 
     message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
 
@@ -1102,6 +1108,8 @@ def idle_listening(s):
     global mode
     global last_command_time
     global listeningOn
+    global curr_msg_id
+
 
     #lets us know we've entered new mode
     handle_strip_self("stripSelf x x rgb:(100,100,100)")
@@ -1151,6 +1159,7 @@ def wearable(s):
     global mode
     global last_command_time
     global listeningOn
+    global curr_msg_id
 
     #lets us know we've entered new mode
     handle_strip_self("stripSelf x x rgb:(100,100,100)")
@@ -1207,6 +1216,7 @@ def proximity_color(s):
     global last_command_time
     global listeningOn
     global sheetColor
+    global curr_msg_id
 
     # select random interaction result: bloom, unbloom, LED
     selection = random.randint(1, 18)
@@ -1228,14 +1238,17 @@ def proximity_color(s):
                 sent = True
                 if sheetColor == "orange":
                     handle_strip_self("stripSelf x x rgb:(150,40,0)")
+                    curr_msg_id = generate_random_id(6)
                     LEDStripColor = '(150,40,0)'
                     forward_strip_to_neighbors(neighbors_list, LEDStripColor, 'x', ['x'])
                 elif sheetColor == "yellow":
                     handle_strip_self("stripSelf x x rgb:(150,105,0)")
+                    curr_msg_id = generate_random_id(6)
                     LEDStripColor = '(150,105,0)'
                     forward_strip_to_neighbors(neighbors_list, LEDStripColor, 'x', ['x'])
                 elif sheetColor == "red":
                     handle_strip_self("stripSelf x x rgb:(150,3,0)")
+                    curr_msg_id = generate_random_id(6)
                     LEDStripColor = '(150,3,0)'
                     forward_strip_to_neighbors(neighbors_list, LEDStripColor, 'x', ['x'])
 
@@ -1257,7 +1270,6 @@ def proximity_color(s):
             if proximity < 200:
                 handle_bloom_update("bloomUpdate x bloom:bloom")
 
-
         # Unbloom Mode (1/18)
         elif selection == 8:
             proximity = tof.read()
@@ -1265,7 +1277,6 @@ def proximity_color(s):
 
             if proximity < 200:
                 handle_bloom_update("bloomUpdate x bloom:unbloom")
-
 
         # Return to Idle Mode
         elif selection > 8:
@@ -1315,16 +1326,17 @@ def proximity_transient_color(s):
     global last_command_time
     global listeningOn
     global sheetColor
+    global curr_msg_id
 
     # select random interaction result: bloom, unbloom, LED
 
     #lets us know we've entered new mode
-    handle_strip_self("stripSelf x x rgb:(100,100,100)")
+    handle_strip_self("stripSelf x x rgb:(0,0,0)")
     time.sleep(2)
 
     while True:
         proximity = tof.read()
-        if proximity < 500 :
+        if proximity < 300:
             if sheetColor == "orange":
                 handle_strip_self("stripSelf x x rgb:(150,40,0)")
                 LEDStripColor = '(150,40,0)'
@@ -1371,55 +1383,104 @@ def proximity_transient_color(s):
                     elif "LEDSelf" in data:
                         handle_LED_self(data)
 
-########## GAME MODE #############
 
-def game(s):
+########## PROXIMITY BLOOM MODE #############
+
+def proximity_bloom(s):
     global neighbors_list
     global LEDColor
     global mode
     global last_command_time
     global listeningOn
     global sheetColor
+    global curr_msg_id
+    global step_sleep
+    global bloom_thresh
+    global unbloom_thresh
 
     # select random interaction result: bloom, unbloom, LED
 
     #lets us know we've entered new mode
-    handle_strip_self("stripSelf x x rgb:(100,100,100)")
+    if sheetColor == "orange":
+        handle_strip_self("stripSelf x x rgb:(150,40,0)")
+        LEDStripColor = '(150,40,0)'
+    elif sheetColor == "yellow":
+        handle_strip_self("stripSelf x x rgb:(150,105,0)")
+        LEDStripColor = '(150,105,0)'
+    elif sheetColor == "red":
+        handle_strip_self("stripSelf x x rgb:(150,3,0)")
+        LEDStripColor = '(150,3,0)'
     time.sleep(2)
 
-    ## ADD BLOOM AT BEGINNING OF THIS MODE FOR VISIBLE LED
-    pointEnd = False
+    hit_thresh = False
     while True:
-
-        ## beginning of round
-        ## countdown pulse 3, 2, 1
         proximity = tof.read()
+        dist_from_stop = tof2.read()
 
-        # you need 20 consecutive hits to win
-        for _ in range(20):
-            # randomly choose a module to be target with 1/36 chance per round
-            selection = random.randint(0, 35)
+        if proximity < 100:
+            if hit_thresh:
+                # flatten (upwards)
+                for i in range(20):
 
-            if selection == 1:
-                handle_module_action("stripSelf x x rgb:(100,0,0)")  # Set the module to red
+                    if i%4==0:
+                        mcp.pin(0, mode=0, value=0)
+                        mcp.pin(1, mode=0, value=0)
+                        mcp.pin(2, mode=0, value=0)
+                        mcp.pin(3, mode=0, value=1)
+                    elif i%4==1:
+                        mcp.pin(0, mode=0, value=0)
+                        mcp.pin(1, mode=0, value=1)
+                        mcp.pin(2, mode=0, value=0)
+                        mcp.pin(3, mode=0, value=0)
+                    elif i%4==2:
+                        mcp.pin(0, mode=0, value=0)
+                        mcp.pin(1, mode=0, value=0)
+                        mcp.pin(2, mode=0, value=1)
+                        mcp.pin(3, mode=0, value=0)
+                    elif i%4==3:
+                        mcp.pin(0, mode=0, value=1)
+                        mcp.pin(1, mode=0, value=0)
+                        mcp.pin(2, mode=0, value=0)
+                        mcp.pin(3, mode=0, value=0)
 
-                time_elapsed = time.time()
+                    time.sleep(step_sleep)
 
-                while True:
-                    # Get proximity information (you need to define how to get this)
-                    proximity = get_proximity()  # Assuming you have a function to get proximity
+                    dist_from_stop = tof2.read()
+                    if dist_from_stop < unbloom_thresh:
+                        hit_thresh = True
 
-                    if proximity <= 100:
-                        handle_module_action("stripSelf x x rgb:(100,100,100)")  # Set the module to white
-                        break
+                else:
+                    # bloom (downwards)
+                    for i in range(20):
+                        if i%4==0:
+                            mcp.pin(0, mode=0, value=1)
+                            mcp.pin(1, mode=0, value=0)
+                            mcp.pin(2, mode=0, value=0)
+                            mcp.pin(3, mode=0, value=0)
 
-                    if time.time() - time_elapsed >= 10:
-                        # End the game if the player doesn't hit the module within 10 seconds
-                        send_to_all_ports("Game Over", range(50000, 50036))
-                        break
+                        elif i%4==1:
+                            mcp.pin(0, mode=0, value=0)
+                            mcp.pin(1, mode=0, value=0)
+                            mcp.pin(2, mode=0, value=1)
+                            mcp.pin(3, mode=0, value=0)
 
-                    # You may want to add some delay here to avoid continuous checking
-                    time.sleep(0.1)  # Adjust the delay as needed
+                        elif i%4==2:
+                            mcp.pin(0, mode=0, value=0)
+                            mcp.pin(1, mode=0, value=1)
+                            mcp.pin(2, mode=0, value=0)
+                            mcp.pin(3, mode=0, value=0)
+                        elif i%4==3:
+                            mcp.pin(0, mode=0, value=0)
+                            mcp.pin(1, mode=0, value=0)
+                            mcp.pin(2, mode=0, value=0)
+                            mcp.pin(3, mode=0, value=1)
+
+                        time.sleep(step_sleep)
+
+                        dist_from_stop = tof2.read()
+                        if dist_from_stop > bloom_thresh:
+                            hit_thresh = False
+
 
         evts = poller.poll(10)
 
@@ -1453,6 +1514,89 @@ def game(s):
                         handle_strip_self(data)
                     elif "LEDSelf" in data:
                         handle_LED_self(data)
+
+########## GAME MODE #############
+
+#def game(s):
+#    global neighbors_list
+#    global LEDColor
+#    global mode
+#    global last_command_time
+#    global listeningOn
+#    global sheetColor
+
+#    # select random interaction result: bloom, unbloom, LED
+
+#    #lets us know we've entered new mode
+#    handle_strip_self("stripSelf x x rgb:(100,100,100)")
+#    time.sleep(2)
+
+#    ## ADD BLOOM AT BEGINNING OF THIS MODE FOR VISIBLE LED
+#    pointEnd = False
+#    while True:
+
+#        ## beginning of round
+#        ## countdown pulse 3, 2, 1
+#        proximity = tof.read()
+
+#        # you need 20 consecutive hits to win
+#        for _ in range(20):
+#            # randomly choose a module to be target with 1/36 chance per round
+#            selection = random.randint(0, 35)
+
+#            if selection == 1:
+#                handle_module_action("stripSelf x x rgb:(100,0,0)")  # Set the module to red
+
+#                time_elapsed = time.time()
+
+#                while True:
+#                    # Get proximity information (you need to define how to get this)
+#                    proximity = get_proximity()  # Assuming you have a function to get proximity
+
+#                    if proximity <= 100:
+#                        handle_module_action("stripSelf x x rgb:(100,100,100)")  # Set the module to white
+#                        break
+
+#                    if time.time() - time_elapsed >= 10:
+#                        # End the game if the player doesn't hit the module within 10 seconds
+#                        send_to_all_ports("Game Over", range(50000, 50036))
+#                        break
+
+#                    # You may want to add some delay here to avoid continuous checking
+#                    time.sleep(0.1)  # Adjust the delay as needed
+
+#        evts = poller.poll(10)
+
+#        ##################### MESSAGE + STATE MANAGEMENT ######################
+#        for sock, evt in evts:
+#            if evt and select.POLLIN:
+#                if sock == s:
+#                    data, addr = s.recvfrom(1024)
+#                    data = data.decode()
+
+#                    last_command_time = time.time()
+
+#                    if "neighborsUpdate" in data:
+#                        handle_neighbors_update(data)
+#                    elif "modeUpdate" in data:
+#                        handle_mode_update(data)
+#                        return
+#                    elif "LEDColorUpdate" in data:
+#                        handle_LED_color_update(data)
+#                    elif "LEDColorDirectionUpdate" in data:
+#                        handle_LED_color_direction_update(data)
+#                    elif "bloomUpdate" in data:
+#                        handle_bloom_update(data)
+#                    elif "stripUpdate" in data and allow_LED_update:
+#                        handle_strip_update(data)
+#                    elif "stripDirectionUpdate" in data and allow_LED_update:
+#                        handle_strip_direction_update(data)
+#                    elif "bloomSelf" in data:
+#                        handle_bloom_self(data)
+#                    elif "stripSelf" in data:
+#                        handle_strip_self(data)
+#                    elif "LEDSelf" in data:
+#                        handle_LED_self(data)
 
 ######### LIGHT PAINTING MODE #########
 def light_painting(s):
@@ -1639,6 +1783,8 @@ while(True):
         wearable(s)
     elif mode == "proximityColor":
         proximity_color(s)
+    elif mode == "proximityBloom":
+        proximity_bloom(s)
     elif mode == "lightPainting":
         light_painting(s)
     elif mode == "proximityTransient":
