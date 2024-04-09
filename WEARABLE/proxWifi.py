@@ -93,6 +93,8 @@ change_Mode_prox = False
 change_Mode_all = False
 change_Mode_participant = False
 
+def generate_random_id(length=6):
+    return ‘’.join(random.choices(‘0123456789’, k=length))
 
 while True:
     if change_Mode_all == False and change_Mode_prox == False:
@@ -107,20 +109,20 @@ while True:
                 print(pyb.elapsed_millis(start))
                 if elapsed <= 10000:
                     if elapsed < 500:
-                        sendData = "wearablePulse X pulse:short rgb:(100,0,100)"
+                        sendData = "wearablePulse X "+ generate_random_id(6) +" pulse:short rgb:(100,0,100)"
                         print(sendData)
                         red_led.on()
                         blue_led.on()
                         green_led.on()
 
                     elif (1000 <= elapsed < 1500):
-                        sendData = "wearablePulse X pulse:medium rgb:(100,0,100)"
+                        sendData = "wearablePulse X "+ generate_random_id(6) +" pulse:medium rgb:(100,0,100)"
                         print(sendData)
                         red_led.on()
                         blue_led.off()
                         green_led.off()
                     elif (2000 <= elapsed < 4000):
-                        sendData = "wearablePulse X pulse:long rgb:(100,0,100)"
+                        sendData = "wearablePulse X "+ generate_random_id(6) +" pulse:long rgb:(100,0,100)"
                         print(sendData)
                         red_led.off()
                         blue_led.on()
@@ -172,19 +174,19 @@ while True:
                 module_picked = random.randint(0, 35)
                 if elapsed <= 10000:
                     if elapsed < 500:
-                        sendData = "wearableExpand X expand:short rgb:(100,0,100)"
+                        sendData = "wearableExpand X "+ generate_random_id(6) +" expand:short rgb:(100,0,100)"
                         print(sendData)
                         red_led.on()
                         blue_led.on()
                         green_led.on()
                     elif (1000 <= elapsed < 1500):
-                        sendData = "wearableExpand X expand:medium rgb:(50,0,100)"
+                        sendData = "wearableExpand X "+ generate_random_id(6) +" expand:medium rgb:(50,0,100)"
                         red_led.on()
                         blue_led.off()
                         green_led.off()
                         print(sendData)
                     elif (2000 <= elapsed < 4000):
-                        sendData = "wearableExpand X expand:long rgb:(0,0,100)"
+                        sendData = "wearableExpand X "+ generate_random_id(6) +" expand:long rgb:(0,0,100)"
                         print(sendData)
                         red_led.off()
                         blue_led.on()
@@ -258,7 +260,7 @@ while True:
 
             # Detect orientation for x-axis
             if accel_x > UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X direction:x-axis-up rgb:(100,0,50)"
+                sendData = "wearablePaint X "+ generate_random_id(6) +" direction:x-axis-up rgb:(100,0,50)"
                 print(sendData)
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -267,7 +269,7 @@ while True:
                 time.sleep(1)
 
             elif accel_x < -UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X direction:x-axis-down rgb:(100,100,0)"
+                sendData = "wearablePaint X "+ generate_random_id(6) +" direction:x-axis-down rgb:(100,100,0)"
                 print(sendData)
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -278,14 +280,14 @@ while True:
 
             # Detect orientation for y-axis
             if accel_y > UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X direction:y-axis-up rgb:(0,0,0)"
+                sendData = "wearablePaint X "+ generate_random_id(6) +" direction:y-axis-up rgb:(0,0,0)"
                 print(sendData)
                 for i in range(36):
                     server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
                 time.sleep(1)
 
             elif accel_y < -UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X direction:y-axis-down rgb:(50,100,0)"
+                sendData = "wearablePaint X "+ generate_random_id(6) +" direction:y-axis-down rgb:(50,100,0)"
                 print(sendData)
                 for i in range(36):
                     server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
@@ -294,7 +296,7 @@ while True:
 
             # Detect orientation for z-axis
             if accel_z > UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X direction:z-axis-up rgb:(100,50,50)"
+                sendData = "wearablePaint X "+ generate_random_id(6) +" direction:z-axis-up rgb:(100,50,50)"
                 print(sendData)
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -303,7 +305,7 @@ while True:
                 time.sleep(1)
 
             elif accel_z < -UP_DOWN_THRESHOLD:
-                sendData = "wearablePaint X direction:z-axis-down rgb:(0,50,100)"
+                sendData = "wearablePaint X "+ generate_random_id(6) +" direction:z-axis-down rgb:(0,50,100)"
                 print(sendData)
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -351,7 +353,7 @@ while True:
 
             # Detect orientation for x-axis
             if accel_x > UP_DOWN_THRESHOLD:
-                sendData = "wearableIMU X direction:x-axis-up rgb:(100,0,50)"
+                sendData = "wearableIMU X "+ generate_random_id(6) +" direction:x-axis-up rgb:(100,0,50)"
                 print("X-axis is up.")
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -360,7 +362,7 @@ while True:
                 time.sleep(1)
 
             elif accel_x < -UP_DOWN_THRESHOLD:
-                sendData = "wearableIMU X direction:x-axis-down rgb:(100,100,0)"
+                sendData = "wearableIMU X "+ generate_random_id(6) +" direction:x-axis-down rgb:(100,100,0)"
                 print("X-axis is down.")
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -371,7 +373,7 @@ while True:
 
             # Detect orientation for y-axis
             if accel_y > UP_DOWN_THRESHOLD:
-                sendData = "wearableIMU X direction:y-axis-up rgb:(0,0,0)"
+                sendData = "wearableIMU X "+ generate_random_id(6) +" direction:y-axis-up rgb:(0,0,0)"
                 print("Y-axis is up.")
                 for i in range(36):
                     server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
@@ -380,7 +382,7 @@ while True:
                 time.sleep(1)
 
             elif accel_y < -UP_DOWN_THRESHOLD:
-                sendData = "wearableIMU X direction:y-axis-down rgb:(50,100,0)"
+                sendData = "wearableIMU X "+ generate_random_id(6) +" direction:y-axis-down rgb:(50,100,0)"
                 print("Y-axis is down.")
                 for i in range(36):
                     server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
@@ -391,7 +393,7 @@ while True:
 
             # Detect orientation for z-axis
             if accel_z > UP_DOWN_THRESHOLD:
-                sendData = "wearableIMU X direction:z-axis-up rgb:(100,50,50)"
+                sendData = "wearableIMU X "+ generate_random_id(6) +" direction:z-axis-up rgb:(100,50,50)"
                 print("Z-axis is up.")
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
@@ -400,7 +402,7 @@ while True:
                 time.sleep(1)
 
             elif accel_z < -UP_DOWN_THRESHOLD:
-                sendData = "wearableIMU X direction:z-axis-down rgb:(0,50,100)"
+                sendData = "wearableIMU X "+ generate_random_id(6) +" direction:z-axis-down rgb:(0,50,100)"
                 print("Z-axis is down.")
                 module_picked = random.randint(0, 35)
                 server.sendto(sendData.encode(), ('255.255.255.255', 50000 + module_picked))
