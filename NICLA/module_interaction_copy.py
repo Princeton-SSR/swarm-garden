@@ -72,7 +72,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 17
+module_ID = 33
 
 info = get_module_info(module_ID)
 
@@ -87,10 +87,10 @@ print("module_ID:", module_ID, "unbloom_thresh:", unbloom_thresh, "bloom_thresh:
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
-neighbors_list = [('bottom','29')]
+neighbors_list = []
 
 # current mode
-mode = "wearable"
+mode = "idle"
 
 # on board LED color (starts as blue (3) after wifi connection)
 LEDColor = "3"
@@ -116,7 +116,7 @@ paint_palette = ['(100,0,0)','(100,0,100)','(0,100,100)','(100,100,0)', '(50,100
 iteration = 0
 
 # used to make messages unique to ensure no doubly received states, reduces settle time
-curr_msg_id = ""
+curr_msg_id = "Z"
 
 ##########################################################################
 
@@ -1219,9 +1219,22 @@ def proximity_color(s):
     global sheetColor
     global curr_msg_id
 
+
     # select random interaction result: bloom, unbloom, LED
     selection = random.randint(1, 18)
 
+    # Variables for moving average
+    window_size = 100  # You can adjust the window size as needed
+    proximity_values = []
+
+    # Function to calculate moving average
+    def moving_average(values):
+        if len(values) < window_size:
+           return sum(values) / len(values)
+        else:
+           return sum(values[-window_size:]) / window_size
+
+    #lets us know we've entered new mode
     #lets us know we've entered new mode
     handle_strip_self("stripSelf x x rgb:(100,100,100)")
     time.sleep(2)
@@ -1231,12 +1244,12 @@ def proximity_color(s):
 
     while True:
 
-        # LED Coloring Mode (1/3 chance)
-        if selection <= 6:
+        # LED Coloring Mode (1/9 chance)
+        if selection <= 2:
             proximity = tof.read()
-            if proximity < 800 and not sent:
-                allow_LED_update = False
-                sent = True
+            proximity_values.append(proximity)
+            proximity_avg = moving_average(proximity_values)
+            if proximity < 700:
                 if sheetColor == "orange":
                     handle_strip_self("stripSelf x x rgb:(150,40,0)")
                     curr_msg_id = generate_random_id(6)
@@ -1253,36 +1266,33 @@ def proximity_color(s):
                     LEDStripColor = '(150,3,0)'
                     forward_strip_to_neighbors(neighbors_list, LEDStripColor, 'x', ['x'])
 
-                listeningOn = False
-                time.sleep(5)
-                listeningOn = True
-
-            elif proximity < 800 and sent:
-                allow_LED_update = False
             else:
-                allow_LED_update = True
-                sent = False
+                handle_strip_self("stripSelf x x rgb:(0,0,0)")
+                curr_msg_id = generate_random_id(6)
+                LEDStripColor = '(0,0,0)'
+                forward_strip_to_neighbors(neighbors_list, LEDStripColor, 'x', ['x'])
 
         # Bloom Mode (1/18 chance)
-        elif selection == 7:
+        elif selection == 3 or selection == 4:
             proximity = tof.read()
             allow_LED_update = True
 
             if proximity < 200:
-                handle_bloom_update("bloomUpdate x bloom:bloom")
+                curr_msg_id = generate_random_id(6)
+                handle_bloom_update("bloomUpdate x x bloom:bloom")
 
         # Unbloom Mode (1/18)
-        elif selection == 8:
+        elif selection == 5 or selection == 6:
             proximity = tof.read()
             allow_LED_update = True
 
             if proximity < 200:
-                handle_bloom_update("bloomUpdate x bloom:unbloom")
+                curr_msg_id = generate_random_id(6)
+                handle_bloom_update("bloomUpdate x x bloom:unbloom")
 
-        # Return to Idle Mode
-        elif selection > 8:
-            mode = "idle"
-            return
+        # Remove oldest value if window size exceeded
+        if len(proximity_values) > window_size:
+            proximity_values.pop(0)
 
         evts = poller.poll(10)
 
@@ -1306,9 +1316,9 @@ def proximity_color(s):
                         handle_LED_color_direction_update(data)
                     elif "bloomUpdate" in data:
                         handle_bloom_update(data)
-                    elif "stripUpdate" in data and allow_LED_update:
+                    elif "stripUpdate" in data:
                         handle_strip_update(data)
-                    elif "stripDirectionUpdate" in data and allow_LED_update:
+                    elif "stripDirectionUpdate" in data:
                         handle_strip_direction_update(data)
                     elif "bloomSelf" in data:
                         handle_bloom_self(data)
@@ -1329,15 +1339,12 @@ def proximity_transient_color(s):
     global sheetColor
     global curr_msg_id
 
-    # select random interaction result: bloom, unbloom, LED
-
-    #lets us know we've entered new mode
     handle_strip_self("stripSelf x x rgb:(0,0,0)")
     time.sleep(2)
 
     while True:
         proximity = tof.read()
-        if proximity < 300:
+        if proximity < 800:
             if sheetColor == "orange":
                 handle_strip_self("stripSelf x x rgb:(150,40,0)")
                 LEDStripColor = '(150,40,0)'
@@ -1413,16 +1420,23 @@ def proximity_bloom(s):
         LEDStripColor = '(150,3,0)'
     time.sleep(2)
 
+    init = tof2.read()
+
     hit_thresh = False
     while True:
         proximity = tof.read()
         dist_from_stop = tof2.read()
 
-        if proximity < 100:
+        if proximity < 150:
+
             if hit_thresh:
                 # flatten (upwards)
-                for i in range(20):
 
+                dist_from_stop = tof2.read()
+                if dist_from_stop > unbloom_thresh:
+                    hit_thresh = False
+
+                for i in range(150):
                     if i%4==0:
                         mcp.pin(0, mode=0, value=0)
                         mcp.pin(1, mode=0, value=0)
@@ -1446,41 +1460,39 @@ def proximity_bloom(s):
 
                     time.sleep(step_sleep)
 
-                    dist_from_stop = tof2.read()
-                    if dist_from_stop < unbloom_thresh:
-                        hit_thresh = True
 
-                else:
-                    # bloom (downwards)
-                    for i in range(20):
-                        if i%4==0:
-                            mcp.pin(0, mode=0, value=1)
-                            mcp.pin(1, mode=0, value=0)
-                            mcp.pin(2, mode=0, value=0)
-                            mcp.pin(3, mode=0, value=0)
+            else:
+                dist_from_stop = tof2.read()
+                if dist_from_stop < bloom_thresh:
+                    hit_thresh = True
+                # bloom (downwards)
+                for i in range(150):
 
-                        elif i%4==1:
-                            mcp.pin(0, mode=0, value=0)
-                            mcp.pin(1, mode=0, value=0)
-                            mcp.pin(2, mode=0, value=1)
-                            mcp.pin(3, mode=0, value=0)
+                    if i%4==0:
+                        mcp.pin(0, mode=0, value=1)
+                        mcp.pin(1, mode=0, value=0)
+                        mcp.pin(2, mode=0, value=0)
+                        mcp.pin(3, mode=0, value=0)
 
-                        elif i%4==2:
-                            mcp.pin(0, mode=0, value=0)
-                            mcp.pin(1, mode=0, value=1)
-                            mcp.pin(2, mode=0, value=0)
-                            mcp.pin(3, mode=0, value=0)
-                        elif i%4==3:
-                            mcp.pin(0, mode=0, value=0)
-                            mcp.pin(1, mode=0, value=0)
-                            mcp.pin(2, mode=0, value=0)
-                            mcp.pin(3, mode=0, value=1)
+                    elif i%4==1:
+                        mcp.pin(0, mode=0, value=0)
+                        mcp.pin(1, mode=0, value=0)
+                        mcp.pin(2, mode=0, value=1)
+                        mcp.pin(3, mode=0, value=0)
 
-                        time.sleep(step_sleep)
+                    elif i%4==2:
+                        mcp.pin(0, mode=0, value=0)
+                        mcp.pin(1, mode=0, value=1)
+                        mcp.pin(2, mode=0, value=0)
+                        mcp.pin(3, mode=0, value=0)
+                    elif i%4==3:
+                        mcp.pin(0, mode=0, value=0)
+                        mcp.pin(1, mode=0, value=0)
+                        mcp.pin(2, mode=0, value=0)
+                        mcp.pin(3, mode=0, value=1)
 
-                        dist_from_stop = tof2.read()
-                        if dist_from_stop > bloom_thresh:
-                            hit_thresh = False
+                    time.sleep(step_sleep)
+
 
 
         evts = poller.poll(10)
@@ -1615,7 +1627,7 @@ def light_painting(s):
     handle_strip_self("stripSelf x x rgb:(0,0,0)")
     time.sleep(2)
 
-#   handle_bloom_self("bloomSelf x x bloom:bloom")
+    handle_bloom_self("bloomSelf x x bloom:bloom")
     touched = False
     while True:
 
