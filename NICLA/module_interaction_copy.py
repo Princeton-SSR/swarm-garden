@@ -439,7 +439,7 @@ def forward_strip_to_neighbors_direction(neighbors, rgb, incoming_rgb, sender_id
     for neighbor in neighbors:
         if neighbor[1] not in prev_senders:
             if neighbor[0] == direction:
-                sendData = "stripDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
+                sendData = "stripDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + curr_msg_id + " " + "rgb:" + incoming_rgb + " " + "direction:" + direction
                 print(sendData + " to module:" + neighbor[1])
                 try:
                     s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
@@ -454,7 +454,7 @@ def forward_bloom_to_neighbors(neighbors, bloom, sender_id_string, prev_senders)
     for neighbor in neighbors:
         if neighbor[1] not in prev_senders:
             if neighbor[0] is not 'far':
-                sendData = "bloomUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "bloom:" + bloom
+                sendData = "bloomUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + curr_msg_id + " " + "bloom:" + bloom
                 print(sendData + " to module:" + neighbor[1])
                 try:
                     s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
@@ -469,7 +469,7 @@ def forward_LED_color_to_neighbors(neighbors, color, sender_id_string, prev_send
     for neighbor in neighbors:
         if neighbor[1] not in prev_senders:
             if neighbor[0] is not 'far':
-                sendData = "LEDColorUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color
+                sendData = "LEDColorUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + curr_msg_id + " " + "color:" + color
                 print(sendData + " to module:" + neighbor[1])
                 try:
                     s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
@@ -484,7 +484,7 @@ def forward_LED_color_to_neighbors_direction(neighbors, color, sender_id_string,
     for neighbor in neighbors:
         if neighbor[1] not in prev_senders:
              if neighbor[0] == direction:
-                sendData = "LEDColorDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + "color:" + color + " " + "direction:" + direction
+                sendData = "LEDColorDirectionUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + curr_msg_id + " " + "color:" + color + " " + "direction:" + direction
                 print(sendData + " to module:" + neighbor[1])
                 try:
                     print(neighbor)
@@ -498,7 +498,7 @@ def forward_LED_color_to_neighbors_direction(neighbors, color, sender_id_string,
 def handle_neighbors_update(data):
     global neighbors_list
 
-    message_type, sender_id_string, prev_senders, msg_id, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     neighbors_list = list(content.items())
     print("neighbors updated to: " + str(neighbors_list))
 
@@ -521,12 +521,20 @@ def handle_mode_update(data):
 def handle_LED_color_update(data):
     global LEDColor
     global neighbors_list
+    global curr_msg_id
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
+
     incoming_color = content["color"]
+    # if i have already recieved a message with this unique id, don't do anything
+    if incoming_msg_id == curr_msg_id:
+        print("rejected duplicate message: " + data)
+        return
 
+    # if i'm already a previous sender of this info don't do anything
     for prev in prev_senders:
         if str(module_ID) == prev:
+            print("rejected backpropped message: " + data)
             return
 
     redLED.off()
@@ -542,12 +550,20 @@ def handle_bloom_update(data):
     global bloom_thresh
     global unbloom_thresh
     global listeningOn
+    global curr_msg_id
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     bloom = content["bloom"]
 
+    # if i have already recieved a message with this unique id, don't do anything
+    if incoming_msg_id == curr_msg_id:
+        print("rejected duplicate message: " + data)
+        return
+
+    # if i'm already a previous sender of this info don't do anything
     for prev in prev_senders:
         if str(module_ID) == prev:
+            print("rejected backpropped message: " + data)
             return
 
     dist_from_stop = tof2.read()
@@ -631,7 +647,6 @@ def handle_strip_update(data):
     global listeningOn
     global curr_msg_id
 
-    # stripUpdate 1,12,13 rgb:(100,0,100)
     message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
@@ -675,13 +690,21 @@ def handle_strip_direction_update(data):
     global LEDStripColor
     global neighbors_list
     global listeningOn
+    global curr_msg_id
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     incoming_rgb = content["rgb"]
     direction = content["direction"]
 
+    # if i have already recieved a message with this unique id, don't do anything
+    if incoming_msg_id == curr_msg_id:
+        print("rejected duplicate message: " + data)
+        return
+
+    # if i'm already a previous sender of this info don't do anything
     for prev in prev_senders:
         if str(module_ID) == prev:
+            print("rejected backpropped message: " + data)
             return
 
     # Remove the outer parentheses and split the string into a list of strings
@@ -708,13 +731,21 @@ def handle_strip_direction_update(data):
 def handle_LED_color_direction_update(data):
     global LEDColor
     global neighbors_list
+    global curr_msg_id
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     incoming_color = content["color"]
     direction = content["direction"]
 
+    # if i have already recieved a message with this unique id, don't do anything
+    if incoming_msg_id == curr_msg_id:
+        print("rejected duplicate message: " + data)
+        return
+
+    # if i'm already a previous sender of this info don't do anything
     for prev in prev_senders:
         if str(module_ID) == prev:
+            print("rejected backpropped message: " + data)
             return
 
     redLED.off()
@@ -734,7 +765,7 @@ def handle_expand(data):
     print("handle_expand")
 
     # Parse the received data to get the LED color, if necessary
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
 
     # Extract the current LED color if sent within the data or use the global one
     incoming_rgb = content["rgb"]
@@ -760,7 +791,7 @@ def handle_expand(data):
             for prev in prev_senders:
                 if neighbor[1] != prev:
                     if neighbor[0] is not 'far':
-                        sendData = "stripSelf" + " " + sender_id_string + "," + str(module_ID) + " " + "rgb:" + incoming_rgb
+                        sendData = "stripSelf" + " " + sender_id_string + "," + str(module_ID) + " " + curr_msg_id + " " + "rgb:" + incoming_rgb
                         print(sendData + " to module:" + neighbor[1])
                         try:
                             s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
@@ -784,7 +815,8 @@ def handle_bloom_self(data):
     global unbloom_thresh
     global listeningOn
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
+
     bloom = content["bloom"]
 
     dist_from_stop = tof2.read()
@@ -817,9 +849,6 @@ def handle_strip_self(data):
     message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
-#    if LEDStripColor == incoming_rgb:
-#        return
-
     # Remove the outer parentheses and split the string into a list of strings
     rgb_values_str = incoming_rgb[1:-1].split(',')
 
@@ -844,7 +873,7 @@ def handle_strip_self(data):
 def handle_strip_paint(data):
     global LEDStripColor
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
     # Remove the outer parentheses and split the string into a list of strings
@@ -875,7 +904,8 @@ def handle_pulse(data):
     np = neopixel.NeoPixel(p, 60)
     n = np.n
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
+
     incoming_rgb = content["rgb"]
 
     pulse = content["pulse"]
@@ -936,7 +966,8 @@ def handle_imu(data):
 
     print("handle_imu")
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
+
     incoming_rgb = content["rgb"]
 
     direction = content["direction"]
@@ -981,7 +1012,7 @@ def handle_imu(data):
 def handle_LED_self(data):
     global LEDColor
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     incoming_color = content["color"]
 
     if LEDColor == incoming_color:
@@ -1000,6 +1031,7 @@ def handle_LED_self(data):
     return
 
 
+# for keeping track of last orientation in IMU mode
 prev_orientation = "none"
 
 def handle_paint(data):
@@ -1009,7 +1041,8 @@ def handle_paint(data):
     global LEDStripColor
     global prev_orientation
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
+
     direction = content["direction"]
 
     if (direction == "x-axis-up"):
@@ -1058,31 +1091,6 @@ def handle_paint(data):
         print("z-down")
         prev_orientation = "z-axis-down"
         return
-
-def return_to_base_conditions():
-    global LEDStripColor
-    global unbloom_thresh
-    global listeningOn
-    # turn off LED stri
-    for color in fade_color(LEDStripColor, "(0,0,0)", FADE_SPEED):
-           # Draw gradient
-        for i in range(n):
-            np[i] = color
-
-        # Update the strip.
-        np.write()
-
-    LEDStripColor = "(0,0,0)"
-
-    # reset to unbloom
-    dist_from_stop = tof2.read()
-
-    if dist_from_stop < unbloom_thresh:
-        while dist_from_stop < unbloom_thresh:
-            upwards()
-            dist_from_stop = tof2.read()
-
-stabilize_time = 20  # seconds until return to base conditions runs
 
 
 ########################### IDLE MESSAGE LISTENING ##########################
@@ -1134,13 +1142,6 @@ def idle_listening(s):
                         elif "LEDSelf" in data:
                             handle_LED_self(data)
 
-        # if no commands have happened in the last 20 seconds, return to base conditions
-        # need to test this check for LEDStripColor and bloom
-#        if time.time() - last_command_time >= stabilize_time and LEDStripColor is not "(0,0,0)":
-#                listeningOn = False
-#                return_to_base_conditions()
-#                time.sleep(5)
-#                listeningOn = True
 
 ########## WEARABLE MODE #############
 
