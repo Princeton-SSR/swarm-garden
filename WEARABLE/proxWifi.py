@@ -48,6 +48,7 @@ import time
 import socket
 import socket
 import time
+import random
 import math
 
 tof = VL53L1X(I2C(2))
@@ -94,7 +95,8 @@ change_Mode_all = False
 change_Mode_participant = False
 
 def generate_random_id(length=6):
-    return ‘’.join(random.choices(‘0123456789’, k=length))
+    digits = '0123456789'
+    return ''.join(random.choice(digits) for _ in range(length))
 
 while True:
     if change_Mode_all == False and change_Mode_prox == False:

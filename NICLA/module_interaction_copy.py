@@ -72,7 +72,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 29
+module_ID = 17
 
 info = get_module_info(module_ID)
 
@@ -90,7 +90,7 @@ print("module_ID:", module_ID, "unbloom_thresh:", unbloom_thresh, "bloom_thresh:
 neighbors_list = [('bottom','29')]
 
 # current mode
-mode = "idle"
+mode = "wearable"
 
 # on board LED color (starts as blue (3) after wifi connection)
 LEDColor = "3"
@@ -385,7 +385,8 @@ def stop():
 
 ########################### MESSAGE PARSER ##########################
 def generate_random_id(length=6):
-    return ''.join(random.choices('0123456789', k=6))
+    digits = '0123456789'
+    return ''.join(random.choice(digits) for _ in range(length))
 
 
 def parse_message(message):
