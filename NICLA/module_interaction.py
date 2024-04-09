@@ -71,7 +71,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 27
+module_ID = 24
 
 info = get_module_info(module_ID)
 
@@ -89,7 +89,7 @@ print("module_ID:", module_ID, "unbloom_thresh:", unbloom_thresh, "bloom_thresh:
 neighbors_list = []
 
 # current mode
-mode = "lightPainting"
+mode = "idle"
 
 # on board LED color (starts as blue (3) after wifi connection)
 LEDColor = "3"

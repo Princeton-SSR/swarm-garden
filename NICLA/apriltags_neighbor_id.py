@@ -25,7 +25,7 @@ server.bind(("", 30001))
 #pyb.LED(3).on()  # visual for wifi connection
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.XGA)
+sensor.set_framesize(sensor.SVGA)
 #sensor.set_windowing((240, 240)) ?
 sensor.skip_frames(time=2000)
 sensor.set_auto_gain(False)
@@ -106,7 +106,7 @@ while True:
             neighbors
         )
 
-        sendData = f"neighborsUpdate {tag.id()} X {neighbors_string(tag.cx(), tag.cy(), neighbors)}"
+        sendData = f"neighborsUpdate {tag.id()} {neighbors_string(tag.cx(), tag.cy(), neighbors)}"
         print(sendData)
 
 #        if tag.id() == 1:

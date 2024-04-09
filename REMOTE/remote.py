@@ -6,7 +6,7 @@ server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 server.bind(("", 20000))
 
 
-# sendData = "modeUpdate wearable"
+# sendData = "stripSelf x rgb:(150,30,0)"
 # for i in range(36):
 #     for _ in range(3):
 #         server.sendto(sendData.encode(), ('255.255.255.255', 50000 + i))
@@ -15,6 +15,4 @@ while True:
 
     sendData = input()
     for _ in range(3):
-        server.sendto(sendData.encode(), ('255.255.255.255', 50027))
-
-
+        server.sendto(sendData.encode(), ('255.255.255.255', 50010))

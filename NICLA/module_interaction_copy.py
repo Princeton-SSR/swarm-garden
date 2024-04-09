@@ -18,7 +18,6 @@ import mcp23017
 from machine import I2C
 from vl53l1x import VL53L1X
 import random
-import string
 
 ######################### SENSORS + BOARD STUFF #########################
 
@@ -73,7 +72,7 @@ def get_module_info(module_id):
     return module_info.get(module_id, {})
 
 # must match the id of the attached April Tag
-module_ID = 27
+module_ID = 10
 
 info = get_module_info(module_ID)
 
@@ -88,10 +87,10 @@ print("module_ID:", module_ID, "unbloom_thresh:", unbloom_thresh, "bloom_thresh:
 
 # list of tuples where neighbor[0] = location, neighbor[1] = id ex. (topright, 4)
 # updates on neighborsUpdate messages
-neighbors_list = []
+neighbors_list = [('bottom','29')]
 
 # current mode
-mode = "lightPainting"
+mode = "idle"
 
 # on board LED color (starts as blue (3) after wifi connection)
 LEDColor = "3"
@@ -386,7 +385,7 @@ def stop():
 
 ########################### MESSAGE PARSER ##########################
 def generate_random_id(length=6):
-    return ''.join(random.choices(string.digits, k=length))
+    return ''.join(random.choices('0123456789', k=6))
 
 
 def parse_message(message):
@@ -426,7 +425,7 @@ def forward_strip_to_neighbors(neighbors, incoming_rgb, sender_id_string, prev_s
     for neighbor in neighbors:
         if neighbor[1] not in prev_senders:
             if neighbor[0] is not 'far':
-                sendData = "stripUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + curr_msg_id + " "+ rgb:" + incoming_rgb
+                sendData = "stripUpdate" + " " + sender_id_string + "," + str(module_ID) + " " + curr_msg_id + " " + "rgb:" + incoming_rgb
                 print(sendData + " to module:" + neighbor[1])
                 try:
                     s.sendto(sendData.encode(), ('255.255.255.255', 50000 + int(neighbor[1])))
@@ -632,20 +631,22 @@ def handle_strip_update(data):
     global listeningOn
     global curr_msg_id
 
-    print(data)
     # stripUpdate 1,12,13 rgb:(100,0,100)
     message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
     # if i have already recieved a message with this unique id, don't do anything
     if incoming_msg_id == curr_msg_id:
+        print("rejected duplicate message: " + data)
         return
 
     # if i'm already a previous sender of this info don't do anything
     for prev in prev_senders:
         if str(module_ID) == prev:
+            print("rejected backpropped message: " + data)
             return
 
+    print("accepted message: " + data)
     # adopt the incoming unique message id
     curr_msg_id = incoming_msg_id
 
@@ -813,7 +814,7 @@ def handle_bloom_self(data):
 def handle_strip_self(data):
     global LEDStripColor
 
-    message_type, sender_id_string, prev_senders, content = parse_message(data)
+    message_type, sender_id_string, prev_senders, incoming_msg_id, content = parse_message(data)
     incoming_rgb = content["rgb"]
 
 #    if LEDStripColor == incoming_rgb:
